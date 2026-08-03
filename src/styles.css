@@ -1,0 +1,481 @@
+/* Minimalist, Wordle-inspired: one accent colour, system type, no decoration.
+   Portrait mobile is the primary target — the whole game fits one screen, never scrolls. */
+
+:root {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --ink: #1a1a1a;
+  --ink-soft: #6b7280;
+  --line: #dedbd6;
+  --accent: #4f46e5;
+  --accent-ink: #ffffff;
+  --red: #c0392b;
+  --radius: 10px;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16161a;
+    --surface: #232329;
+    --ink: #f2f2f0;
+    --ink-soft: #9b9ba3;
+    --line: #3a3a42;
+    --accent: #818cf8;
+    --accent-ink: #16161a;
+    --red: #ef6f61;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Shell: header / board / hand bar, no page scroll ---------- */
+
+.app {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem max(0.5rem, env(safe-area-inset-bottom));
+  gap: 0.5rem;
+}
+
+.main {
+  min-height: 0;
+}
+
+/* ---------- Header ---------- */
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.header-date {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.header-tools {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.header-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 0.15rem;
+}
+
+.score {
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-meta {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Board: 4 rows x 2 columns in portrait ---------- */
+
+.board {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  row-gap: clamp(0.35rem, 1.5vh, 0.7rem);
+  column-gap: clamp(0.6rem, 3vw, 1.1rem);
+}
+
+/* Card width is derived from row height, so 1fr columns leave slack on both sides.
+   Pulling each column in toward the gutter keeps the eight piles reading as one board. */
+.board > *:nth-child(odd) {
+  justify-self: end;
+}
+
+.board > *:nth-child(even) {
+  justify-self: start;
+}
+
+.pile {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 5 / 7;
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.pile--selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  transform: translateY(-3px);
+}
+
+.pile--card:disabled {
+  opacity: 0.45;
+}
+
+.pile--card:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.pile--empty {
+  border-style: dashed;
+  background: transparent;
+  color: var(--ink-soft);
+  opacity: 0.5;
+}
+
+.pile-count {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.4rem;
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.pile-card {
+  display: grid;
+  place-items: center;
+  animation: flip-in 0.22s ease-out;
+}
+
+@keyframes flip-in {
+  from {
+    transform: rotateY(80deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+/* ---------- Card faces ---------- */
+
+.card-face {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.card-rank {
+  font-size: clamp(1.4rem, 6.5vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.card-suit {
+  font-size: clamp(1rem, 4.5vw, 1.5rem);
+  margin-top: 0.1em;
+}
+
+.card-face--red {
+  color: var(--red);
+}
+
+.card-face--wild {
+  color: var(--accent);
+}
+
+.card-face--wild .card-suit {
+  font-size: clamp(0.55rem, 2.5vw, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* ---------- Hand bar ---------- */
+
+.handbar {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.handbar-preview {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.35rem;
+  font-size: 0.9rem;
+}
+
+.handbar-category {
+  font-weight: 700;
+}
+
+.handbar-points {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.handbar-penalty {
+  color: var(--ink-soft);
+}
+
+.handbar-hint {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.handbar-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+}
+
+.btn {
+  min-height: 2.9rem;
+  padding: 0 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: transparent;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+/* ---------- Sheets (rules, results) ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.45);
+  padding: 0;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 30rem;
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: var(--bg);
+  border-radius: 16px 16px 0 0;
+  padding: 1.25rem 1.25rem max(1.25rem, env(safe-area-inset-bottom));
+  animation: rise 0.2s ease-out;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.sheet-eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.sheet-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+}
+
+.rules {
+  margin: 0.75rem 0 1rem;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.rules li + li {
+  margin-top: 0.45rem;
+}
+
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.25rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.ladder-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ladder dt,
+.ladder dd {
+  margin: 0;
+}
+
+.ladder dd {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+/* ---------- Results ---------- */
+
+.results-score {
+  margin: 0.15rem 0 0;
+  font-size: 3.25rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.results-best {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.results-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.results-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.results-cards {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pip {
+  width: 7px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--ink-soft);
+}
+
+.pip--empty {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.results-points {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---------- Landscape / wide: 2 rows x 4 columns ---------- */
+
+@media (orientation: landscape) and (max-height: 34rem) {
+  .app {
+    max-width: 46rem;
+  }
+
+  .board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Four columns have no single gutter to hug — centre each card in its cell instead. */
+  .board > *:nth-child(odd),
+  .board > *:nth-child(even) {
+    justify-self: center;
+  }
+
+  .score {
+    font-size: 1.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
