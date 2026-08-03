@@ -5,11 +5,12 @@ import type { Card } from '../game/types';
 type Props = {
   cards: Card[];
   livePiles: number;
+  handsPlayed: number;
   onClear: () => void;
   onSubmit: () => void;
 };
 
-export function HandBar({ cards, livePiles, onClear, onSubmit }: Props) {
+export function HandBar({ cards, livePiles, handsPlayed, onClear, onSubmit }: Props) {
   const hand = cards.length > 0 ? evaluateHand(cards) : null;
   // Once fewer than 5 piles hold cards, a short hand is forced rather than a mistake.
   const forcedPartial = livePiles < MAX_HAND_SIZE;
@@ -29,11 +30,16 @@ export function HandBar({ cards, livePiles, onClear, onSubmit }: Props) {
               )}
             </span>
           </>
-        ) : (
+        ) : forcedPartial ? (
           <span className="handbar-hint">
-            {forcedPartial
-              ? `Tap up to ${livePiles} card${livePiles === 1 ? '' : 's'} — partial hands score half`
-              : 'Tap up to 5 cards, one per pile'}
+            {`Tap up to ${livePiles} card${livePiles === 1 ? '' : 's'} — partial hands score half`}
+          </span>
+        ) : handsPlayed === 0 ? (
+          <span className="handbar-hint">Tap up to 5 cards, one per pile</span>
+        ) : (
+          // First-hand instruction has done its job — leave the strip quiet rather than nag.
+          <span className="handbar-hint" aria-hidden="true">
+            &nbsp;
           </span>
         )}
       </div>
