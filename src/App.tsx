@@ -5,14 +5,9 @@ import { Header } from './components/Header';
 import { HowToPlay } from './components/HowToPlay';
 import { Results } from './components/Results';
 import { todayKey } from './game/rng';
-import {
-  cardsRemaining,
-  gameReducer,
-  initGame,
-  livePileCount,
-  selectedCards,
-} from './game/reducer';
+import { gameReducer, initGame, livePileCount, selectedCards } from './game/reducer';
 import type { GameState } from './game/reducer';
+import { CATEGORY_LABELS } from './game/types';
 import {
   clearGame,
   hasSeenHelp,
@@ -34,7 +29,9 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, bootstrap);
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [showHelp, setShowHelp] = useState(() => !hasSeenHelp());
+  const [toast, setToast] = useState<{ id: number; label: string; score: number } | null>(null);
   const recordedRef = useRef<GameState | null>(null);
+  const prevHandCountRef = useRef(state.hands.length);
 
   useEffect(() => {
     saveGame(state);
@@ -47,10 +44,29 @@ export default function App() {
     setStats(recordRun(state.dateKey, state.total));
   }, [state]);
 
+  useEffect(() => {
+    if (state.hands.length > prevHandCountRef.current) {
+      const last = state.hands[state.hands.length - 1];
+      const id = Date.now();
+      setToast({ id, label: CATEGORY_LABELS[last.category], score: last.score });
+      const timer = setTimeout(() => {
+        setToast((current) => (current?.id === id ? null : current));
+      }, 1100);
+      prevHandCountRef.current = state.hands.length;
+      return () => clearTimeout(timer);
+    }
+    prevHandCountRef.current = state.hands.length;
+  }, [state.hands]);
+
   const handleNewGame = useCallback(() => {
+    // A run in progress is one mis-tap away from the reset button — confirm before wiping it.
+    const hasProgress = state.hands.length > 0 || state.selected.length > 0;
+    if (hasProgress && !window.confirm("Restart today's puzzle? Your current run will be lost.")) {
+      return;
+    }
     clearGame();
     dispatch({ type: 'newGame', dateKey: todayKey() });
-  }, []);
+  }, [state.hands.length, state.selected.length]);
 
   const closeHelp = useCallback(() => {
     markHelpSeen();
@@ -65,7 +81,7 @@ export default function App() {
         dateKey={state.dateKey}
         total={state.total}
         handsPlayed={state.hands.length}
-        cardsLeft={cardsRemaining(state)}
+        lastHand={state.hands.length > 0 ? state.hands[state.hands.length - 1] : null}
         onNewGame={handleNewGame}
         onHelp={() => setShowHelp(true)}
       />
@@ -76,11 +92,18 @@ export default function App() {
           selected={state.selected}
           onToggle={(pile) => dispatch({ type: 'toggle', pile })}
         />
+        {toast && (
+          <div className="hand-toast" key={toast.id} aria-hidden="true">
+            <span className="hand-toast-name">{toast.label}</span>
+            <span className="hand-toast-points">+{toast.score}</span>
+          </div>
+        )}
       </main>
 
       <HandBar
         cards={selection}
         livePiles={livePileCount(state)}
+        handsPlayed={state.hands.length}
         onClear={() => dispatch({ type: 'clear' })}
         onSubmit={() => dispatch({ type: 'submit' })}
       />

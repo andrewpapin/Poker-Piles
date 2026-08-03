@@ -17,9 +17,8 @@ export function CardFace({ card }: { card: Card }) {
     );
   }
 
-  const red = card.suit === 'H' || card.suit === 'D';
   return (
-    <span className={`card-face${red ? ' card-face--red' : ''}`}>
+    <span className={`card-face card-face--suit-${card.suit.toLowerCase()}`}>
       <span className="card-rank">{RANK_LABELS[card.rank]}</span>
       <span className="card-suit">{SUIT_GLYPHS[card.suit]}</span>
     </span>
