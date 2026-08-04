@@ -2,10 +2,20 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Board } from './components/Board';
 import { HandBar } from './components/HandBar';
 import { Header } from './components/Header';
+import { HoldSlots } from './components/HoldSlots';
 import { HowToPlay } from './components/HowToPlay';
 import { Results } from './components/Results';
 import { todayKey } from './game/rng';
-import { gameReducer, initGame, livePileCount, selectedCards } from './game/reducer';
+import {
+  gameReducer,
+  heldCount,
+  initGame,
+  livePileCount,
+  openHoldSlot,
+  selectedCards,
+  selectedHeldIndices,
+  selectedPileIndices,
+} from './game/reducer';
 import type { GameState } from './game/reducer';
 import { CATEGORY_LABELS } from './game/types';
 import {
@@ -60,13 +70,14 @@ export default function App() {
 
   const handleNewGame = useCallback(() => {
     // A run in progress is one mis-tap away from the reset button — confirm before wiping it.
-    const hasProgress = state.hands.length > 0 || state.selected.length > 0;
+    const hasProgress =
+      state.hands.length > 0 || state.selected.length > 0 || state.held.some((c) => c !== null);
     if (hasProgress && !window.confirm("Restart today's puzzle? Your current run will be lost.")) {
       return;
     }
     clearGame();
     dispatch({ type: 'newGame', dateKey: todayKey() });
-  }, [state.hands.length, state.selected.length]);
+  }, [state.hands.length, state.selected.length, state.held]);
 
   const closeHelp = useCallback(() => {
     markHelpSeen();
@@ -74,6 +85,7 @@ export default function App() {
   }, []);
 
   const selection = selectedCards(state);
+  const holdAvailable = openHoldSlot(state) !== -1;
 
   return (
     <div className="app">
@@ -89,8 +101,17 @@ export default function App() {
       <main className="main">
         <Board
           piles={state.piles}
-          selected={state.selected}
+          selectedPiles={selectedPileIndices(state)}
+          selectedCount={state.selected.length}
+          holdAvailable={holdAvailable}
           onToggle={(pile) => dispatch({ type: 'toggle', pile })}
+          onHold={(pile) => dispatch({ type: 'hold', pile })}
+        />
+        <HoldSlots
+          held={state.held}
+          selected={selectedHeldIndices(state)}
+          selectedCount={state.selected.length}
+          onToggle={(slot) => dispatch({ type: 'toggleHeld', slot })}
         />
         {toast && (
           <div className="hand-toast" key={toast.id} aria-hidden="true">
@@ -103,6 +124,7 @@ export default function App() {
       <HandBar
         cards={selection}
         livePiles={livePileCount(state)}
+        heldCount={heldCount(state)}
         handsPlayed={state.hands.length}
         onClear={() => dispatch({ type: 'clear' })}
         onSubmit={() => dispatch({ type: 'submit' })}

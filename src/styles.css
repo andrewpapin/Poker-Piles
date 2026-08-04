@@ -74,6 +74,8 @@ button {
 .main {
   position: relative;
   min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 /* ---------- Header ---------- */
@@ -162,10 +164,16 @@ button {
   column-gap: 0.5rem;
 }
 
-/* A pile is its face card over one rule per buried card. Sizing is driven by
-   column width — the scarce axis on a 4-wide portrait board — with height
-   following from the card's aspect ratio. */
+/* A pile is its face card over one rule per buried card, plus a slim hold
+   button beneath. Sizing is driven by column width — the scarce axis on a
+   4-wide portrait board — with height following from the card's aspect ratio. */
 .pile {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 5px;
+}
+
+.pile-select {
   display: grid;
   grid-template-rows: auto auto;
   gap: 7px;
@@ -174,13 +182,36 @@ button {
   background: none;
 }
 
-.pile:disabled {
+.pile-select:disabled {
+  cursor: default;
+  opacity: 0.26;
+}
+
+.pile-select:focus-visible {
+  outline: var(--w) solid var(--ink);
+  outline-offset: 4px;
+}
+
+.pile-hold {
+  border: 1.5px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 0;
+}
+
+.pile-hold:disabled {
+  border-color: var(--soft);
+  color: var(--soft);
   cursor: default;
 }
 
-.pile:focus-visible {
+.pile-hold:focus-visible {
   outline: var(--w) solid var(--ink);
-  outline-offset: 4px;
+  outline-offset: 2px;
 }
 
 .pile--spent {
@@ -216,10 +247,6 @@ button {
 .pile--selected .card {
   border-width: var(--w-bold);
   transform: translateY(-8px);
-}
-
-.pile:disabled:not(.pile--spent) {
-  opacity: 0.26;
 }
 
 .card-rank {
@@ -276,6 +303,41 @@ button {
   display: block;
   height: 3px;
   background: var(--ink);
+}
+
+/* ---------- Hold slots ---------- */
+
+.hold-slots {
+  display: flex;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 0.6rem 0 0;
+}
+
+.hold-slot,
+.hold-slot-empty {
+  width: 3.2rem;
+}
+
+.hold-slot {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.hold-slot:focus-visible {
+  outline: var(--w) solid var(--ink);
+  outline-offset: 4px;
+}
+
+.hold-slot--selected .card {
+  border-width: var(--w-bold);
+  transform: translateY(-6px);
+}
+
+.hold-slot:disabled {
+  opacity: 0.26;
+  cursor: default;
 }
 
 /* ---------- Hand bar ---------- */
