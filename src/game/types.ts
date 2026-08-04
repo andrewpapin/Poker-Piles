@@ -105,3 +105,4 @@ export const PILE_COUNT = 8;
 export const PILE_SIZE = 7;
 export const MAX_HAND_SIZE = 5;
 export const WILD_COUNT = 4;
+export const HOLD_SLOT_COUNT = 2;

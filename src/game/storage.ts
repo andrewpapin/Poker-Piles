@@ -1,5 +1,5 @@
-import { PILE_COUNT } from './types';
-import type { GameState } from './reducer';
+import { HOLD_SLOT_COUNT, PILE_COUNT } from './types';
+import type { GameState, SelectionEntry } from './reducer';
 
 /**
  * Local-only persistence. Nothing is synced anywhere and nothing survives a new
@@ -91,10 +91,12 @@ export function clearGame(): void {
 
 /**
  * Restores an in-progress run so a backgrounded mobile tab does not lose it.
- * Anything stale or malformed is discarded rather than trusted.
+ * Anything stale or malformed is discarded rather than trusted. Saves from before hold slots
+ * existed lack `held` and store `selected` as plain pile-index numbers — those are migrated
+ * in place rather than discarded, so a returning player doesn't lose their run over it.
  */
 export function loadGame(dateKey: string): GameState | null {
-  const stored = readJson<GameState>(GAME_KEY);
+  const stored = readJson<GameState & { selected: unknown[] }>(GAME_KEY);
   if (
     !stored ||
     stored.dateKey !== dateKey ||
@@ -102,9 +104,15 @@ export function loadGame(dateKey: string): GameState | null {
     stored.piles.length !== PILE_COUNT ||
     !Array.isArray(stored.hands) ||
     !Array.isArray(stored.selected) ||
-    typeof stored.total !== 'number'
+    typeof stored.total !== 'number' ||
+    (stored.held !== undefined && (!Array.isArray(stored.held) || stored.held.length !== HOLD_SLOT_COUNT))
   ) {
     return null;
   }
-  return stored;
+
+  const held = stored.held ?? Array(HOLD_SLOT_COUNT).fill(null);
+  const selected: SelectionEntry[] = stored.selected.map((e) =>
+    typeof e === 'number' ? { origin: 'pile', index: e } : (e as SelectionEntry),
+  );
+  return { ...stored, held, selected };
 }

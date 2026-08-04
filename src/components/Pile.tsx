@@ -8,7 +8,9 @@ type Props = {
   index: number;
   selected: boolean;
   disabled: boolean;
+  holdEnabled: boolean;
   onToggle: (index: number) => void;
+  onHold: (index: number) => void;
 };
 
 /**
@@ -27,7 +29,7 @@ function StackRules({ buried }: { buried: number }) {
   );
 }
 
-export function Pile({ pile, index, selected, disabled, onToggle }: Props) {
+export function Pile({ pile, index, selected, disabled, holdEnabled, onToggle, onHold }: Props) {
   const card = topCard(pile);
 
   if (!card) {
@@ -41,19 +43,30 @@ export function Pile({ pile, index, selected, disabled, onToggle }: Props) {
 
   const buried = pile.length - 1;
   return (
-    <button
-      type="button"
-      className={`pile${selected ? ' pile--selected' : ''}`}
-      onClick={() => onToggle(index)}
-      disabled={disabled}
-      aria-pressed={selected}
-      aria-label={`Pile ${index + 1}, ${cardLabel(card)}, ${buried} card${
-        buried === 1 ? '' : 's'
-      } beneath`}
-    >
-      {/* Keyed on the card so a newly revealed top card replays its entrance. */}
-      <CardFace key={card.id} card={card} />
-      <StackRules buried={Math.min(buried, PILE_SIZE - 1)} />
-    </button>
+    <div className={`pile${selected ? ' pile--selected' : ''}`}>
+      <button
+        type="button"
+        className="pile-select"
+        onClick={() => onToggle(index)}
+        disabled={disabled}
+        aria-pressed={selected}
+        aria-label={`Pile ${index + 1}, ${cardLabel(card)}, ${buried} card${
+          buried === 1 ? '' : 's'
+        } beneath`}
+      >
+        {/* Keyed on the card so a newly revealed top card replays its entrance. */}
+        <CardFace key={card.id} card={card} />
+        <StackRules buried={Math.min(buried, PILE_SIZE - 1)} />
+      </button>
+      <button
+        type="button"
+        className="pile-hold"
+        onClick={() => onHold(index)}
+        disabled={!holdEnabled}
+        aria-label={`Hold ${cardLabel(card)} from pile ${index + 1}`}
+      >
+        Hold
+      </button>
+    </div>
   );
 }

@@ -21,14 +21,20 @@ describe('initGame', () => {
     const state = initGame(SEED);
     expect(cardsRemaining(state)).toBe(PILE_COUNT * PILE_SIZE);
     expect(livePileCount(state)).toBe(PILE_COUNT);
-    expect(state).toMatchObject({ selected: [], hands: [], total: 0, status: 'playing' });
+    expect(state).toMatchObject({
+      selected: [],
+      held: [null, null],
+      hands: [],
+      total: 0,
+      status: 'playing',
+    });
   });
 });
 
 describe('selection', () => {
   it('toggles a pile on and back off', () => {
     let state = gameReducer(initGame(SEED), { type: 'toggle', pile: 3 });
-    expect(state.selected).toEqual([3]);
+    expect(state.selected).toEqual([{ origin: 'pile', index: 3 }]);
     state = gameReducer(state, { type: 'toggle', pile: 3 });
     expect(state.selected).toEqual([]);
   });
@@ -36,7 +42,7 @@ describe('selection', () => {
   it('caps the selection at five piles', () => {
     let state = initGame(SEED);
     for (let i = 0; i < PILE_COUNT; i++) state = gameReducer(state, { type: 'toggle', pile: i });
-    expect(state.selected).toEqual([0, 1, 2, 3, 4]);
+    expect(state.selected).toEqual([0, 1, 2, 3, 4].map((index) => ({ origin: 'pile', index })));
   });
 
   it('ignores empty piles', () => {
@@ -88,6 +94,115 @@ describe('submitting a hand', () => {
   it('does nothing when no cards are selected', () => {
     const state = initGame(SEED);
     expect(gameReducer(state, { type: 'submit' })).toBe(state);
+  });
+});
+
+describe('holding', () => {
+  it('banks the top card and reveals the next one, just like a draw', () => {
+    const before = initGame(SEED);
+    const top = topCard(before.piles[0]);
+    const after = gameReducer(before, { type: 'hold', pile: 0 });
+
+    expect(after.held[0]).toEqual(top);
+    expect(after.piles[0]).toHaveLength(PILE_SIZE - 1);
+    expect(topCard(after.piles[0])).toEqual(before.piles[0][PILE_SIZE - 2]);
+  });
+
+  it('fills the second slot independently of the first', () => {
+    const before = initGame(SEED);
+    const topA = topCard(before.piles[0]);
+    const topB = topCard(before.piles[1]);
+    let state = gameReducer(before, { type: 'hold', pile: 0 });
+    state = gameReducer(state, { type: 'hold', pile: 1 });
+
+    expect(state.held).toEqual([topA, topB]);
+  });
+
+  it('does nothing once both slots are full', () => {
+    let state = gameReducer(initGame(SEED), { type: 'hold', pile: 0 });
+    state = gameReducer(state, { type: 'hold', pile: 1 });
+    expect(gameReducer(state, { type: 'hold', pile: 2 })).toBe(state);
+  });
+
+  it('ignores empty piles', () => {
+    const state = initGame(SEED);
+    const emptied: GameState = { ...state, piles: state.piles.map((p, i) => (i === 0 ? [] : p)) };
+    expect(gameReducer(emptied, { type: 'hold', pile: 0 })).toBe(emptied);
+  });
+
+  it('does nothing when that pile is currently selected', () => {
+    const state = gameReducer(initGame(SEED), { type: 'toggle', pile: 0 });
+    expect(gameReducer(state, { type: 'hold', pile: 0 })).toBe(state);
+  });
+
+  it('toggles a held card into and out of the current selection', () => {
+    const held = gameReducer(initGame(SEED), { type: 'hold', pile: 0 });
+    const card = held.held[0];
+
+    let state = gameReducer(held, { type: 'toggleHeld', slot: 0 });
+    expect(state.selected).toEqual([{ origin: 'held', index: 0 }]);
+    expect(selectedCards(state)).toEqual([card]);
+
+    state = gameReducer(state, { type: 'toggleHeld', slot: 0 });
+    expect(state.selected).toEqual([]);
+  });
+
+  it('does nothing when toggling an empty slot', () => {
+    const state = initGame(SEED);
+    expect(gameReducer(state, { type: 'toggleHeld', slot: 0 })).toBe(state);
+  });
+
+  it('shares the five-card cap across pile and held selections', () => {
+    let state = gameReducer(initGame(SEED), { type: 'hold', pile: 6 });
+    state = gameReducer(state, { type: 'hold', pile: 7 });
+    state = gameReducer(state, { type: 'toggleHeld', slot: 0 });
+    state = gameReducer(state, { type: 'toggleHeld', slot: 1 });
+    state = gameReducer(state, { type: 'toggle', pile: 0 });
+    state = gameReducer(state, { type: 'toggle', pile: 1 });
+    state = gameReducer(state, { type: 'toggle', pile: 2 });
+    expect(state.selected).toHaveLength(5);
+    state = gameReducer(state, { type: 'toggle', pile: 3 });
+    expect(state.selected).toHaveLength(5);
+  });
+
+  it('submits a mixed pile+held hand, popping the pile once and clearing the slot', () => {
+    let state = gameReducer(initGame(SEED), { type: 'hold', pile: 0 });
+    const pileZeroAfterHold = state.piles[0];
+    state = gameReducer(state, { type: 'toggle', pile: 1 });
+    state = gameReducer(state, { type: 'toggle', pile: 2 });
+    state = gameReducer(state, { type: 'toggleHeld', slot: 0 });
+    state = gameReducer(state, { type: 'submit' });
+
+    expect(state.held[0]).toBeNull();
+    expect(state.piles[0]).toBe(pileZeroAfterHold);
+    expect(state.piles[1]).toHaveLength(PILE_SIZE - 1);
+    expect(state.piles[2]).toHaveLength(PILE_SIZE - 1);
+    expect(state.hands[0].cardCount).toBe(3);
+    expect(state.selected).toEqual([]);
+  });
+
+  it('keeps the game playing once every pile is empty but a hold slot is occupied', () => {
+    let state = gameReducer(initGame(SEED), { type: 'hold', pile: 0 });
+    const heldCard = state.held[0];
+    let guard = 0;
+
+    while (state.piles.some((p) => p.length > 0) && guard++ < 100) {
+      const live = state.piles
+        .map((pile, i) => (pile.length > 0 ? i : -1))
+        .filter((i) => i >= 0)
+        .slice(0, 5);
+      state = play(state, ...live);
+    }
+
+    expect(state.piles.every((p) => p.length === 0)).toBe(true);
+    expect(state.status).toBe('playing');
+    expect(state.held[0]).toEqual(heldCard);
+
+    const finished = gameReducer(gameReducer(state, { type: 'toggleHeld', slot: 0 }), {
+      type: 'submit',
+    });
+    expect(finished.status).toBe('complete');
+    expect(finished.held).toEqual([null, null]);
   });
 });
 

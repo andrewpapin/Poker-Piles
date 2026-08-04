@@ -11,6 +11,7 @@ import type { Card } from '../game/types';
 type Props = {
   cards: Card[];
   livePiles: number;
+  heldCount: number;
   handsPlayed: number;
   onClear: () => void;
   onSubmit: () => void;
@@ -27,10 +28,10 @@ function Tiers({ tier }: { tier: number | null }) {
   );
 }
 
-export function HandBar({ cards, livePiles, handsPlayed, onClear, onSubmit }: Props) {
+export function HandBar({ cards, livePiles, heldCount, handsPlayed, onClear, onSubmit }: Props) {
   const hand = cards.length > 0 ? evaluateHand(cards) : null;
-  // Once fewer than 5 piles hold cards, a short hand is forced rather than a mistake.
-  const forcedPartial = livePiles < MAX_HAND_SIZE;
+  // Once piles and held cards combined can't reach 5, a short hand is forced rather than a mistake.
+  const forcedPartial = livePiles + heldCount < MAX_HAND_SIZE;
 
   let note: string;
   if (hand) {
@@ -38,7 +39,10 @@ export function HandBar({ cards, livePiles, handsPlayed, onClear, onSubmit }: Pr
       ? `${hand.cardCount} of ${MAX_HAND_SIZE} · halved from ${CATEGORY_POINTS[hand.category]}`
       : 'Full hand';
   } else if (forcedPartial) {
-    note = `${livePiles} pile${livePiles === 1 ? '' : 's'} left · short hands halve`;
+    note =
+      heldCount > 0
+        ? `${livePiles} pile${livePiles === 1 ? '' : 's'} + ${heldCount} held left · short hands halve`
+        : `${livePiles} pile${livePiles === 1 ? '' : 's'} left · short hands halve`;
   } else if (handsPlayed === 0) {
     note = 'One card per pile';
   } else {
