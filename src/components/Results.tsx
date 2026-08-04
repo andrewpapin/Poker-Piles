@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { buildShareText, shareResults } from '../game/share';
-import { CATEGORY_LABELS, MAX_HAND_SIZE } from '../game/types';
+import { CATEGORY_LABELS, CATEGORY_TIER, TIER_COUNT } from '../game/types';
 import type { HandResult } from '../game/types';
 import type { DailyStats } from '../game/storage';
 
@@ -18,7 +18,7 @@ export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
   async function handleShare() {
     const outcome = await shareResults(buildShareText(dateKey, total, hands));
     if (outcome === 'shared') return;
-    setShareLabel(outcome === 'copied' ? 'Copied!' : 'Copy failed');
+    setShareLabel(outcome === 'copied' ? 'Copied' : 'Copy failed');
     setTimeout(() => setShareLabel('Share'), 2000);
   }
 
@@ -27,19 +27,17 @@ export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
       <div className="sheet">
         <p className="sheet-eyebrow">Deck cleared</p>
         <p className="results-score">{total}</p>
-        {stats && stats.plays > 1 && (
-          <p className="results-best">Best today: {stats.bestScore} · {stats.plays} runs</p>
-        )}
+        <p className="results-best">
+          {hands.length} hand{hands.length === 1 ? '' : 's'}
+          {stats && stats.plays > 1 ? ` · best today ${stats.bestScore}` : ''}
+        </p>
 
         <ol className="results-list">
           {hands.map((hand, i) => (
             <li key={i} className="results-row">
-              {/* Five slots, filled to the number of cards played, so a short hand reads
-                  as short at a glance. Drawn in CSS — the 🂠 glyph is missing on some
-                  devices, and the share text is where it belongs. */}
-              <span className="results-cards" aria-hidden="true">
-                {Array.from({ length: MAX_HAND_SIZE }, (_, slot) => (
-                  <i key={slot} className={slot < hand.cardCount ? 'pip' : 'pip pip--empty'} />
+              <span className="results-tier" aria-hidden="true">
+                {Array.from({ length: TIER_COUNT }, (_, slot) => (
+                  <i key={slot} className={slot <= CATEGORY_TIER[hand.category] ? 'on' : undefined} />
                 ))}
               </span>
               <span className="results-name">{CATEGORY_LABELS[hand.category]}</span>

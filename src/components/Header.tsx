@@ -53,7 +53,22 @@ export function Header({ dateKey, total, handsPlayed, lastHand, onNewGame, onHel
             ?
           </button>
           <button type="button" className="icon-btn" onClick={onNewGame} aria-label="Restart">
-            ↺
+            {/* An inline glyph instead of the ↺ character, which several mobile
+                system fonts render inconsistently or drop entirely. */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+              <path d="M20 4v5h-5" />
+            </svg>
           </button>
         </div>
       </div>

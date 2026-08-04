@@ -10,15 +10,15 @@ export function cardLabel(card: Card): string {
 export function CardFace({ card }: { card: Card }) {
   if (card.kind === 'wild') {
     return (
-      <span className="card-face card-face--wild">
+      <span className="card card--wild">
         <span className="card-rank">★</span>
-        <span className="card-suit">WILD</span>
+        <span className="card-suit">Wild</span>
       </span>
     );
   }
 
   return (
-    <span className={`card-face card-face--suit-${card.suit.toLowerCase()}`}>
+    <span className={`card card--suit-${card.suit.toLowerCase()}`}>
       <span className="card-rank">{RANK_LABELS[card.rank]}</span>
       <span className="card-suit">{SUIT_GLYPHS[card.suit]}</span>
     </span>

@@ -49,9 +49,9 @@ rules live in components.
 | `deck.ts` | `buildDeck()` (canonical 56-card deck), `shuffle()`, `dealPiles(dateKey)` — the whole deal is a pure function of the date |
 | `evaluator.ts` | `evaluateHand()`: hand categorization, optimal wild-card resolution, partial-hand score scaling, memoized via a cache keyed on sorted card identities |
 | `reducer.ts` | `gameReducer`/`GameState`/`GameAction`: selection, submitting a hand, detecting end-of-run |
-| `share.ts` | Spoiler-free share text generation; Web Share API with a clipboard (and `execCommand` textarea) fallback |
+| `share.ts` | Spoiler-free share text: a block grid of per-hand tiers (never a rank, suit or category name); Web Share API with a clipboard (and `execCommand` textarea) fallback |
 | `storage.ts` | localStorage persistence for stats and an in-progress run; every access is try/catch-guarded since Safari private mode throws on write |
-| `types.ts` | Shared types (`Card`, `Pile`, `HandCategory`, `HandResult`, `GameState` shape helpers) and constants (`CATEGORY_POINTS`, `PILE_COUNT`, `PILE_SIZE`, `MAX_HAND_SIZE`, `WILD_COUNT`) |
+| `types.ts` | Shared types (`Card`, `Pile`, `HandCategory`, `HandResult`, `GameState` shape helpers) and constants (`CATEGORY_POINTS`, `CATEGORY_TIER`, `PILE_COUNT`, `PILE_SIZE`, `MAX_HAND_SIZE`, `WILD_COUNT`) |
 
 Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, holds it in a
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
