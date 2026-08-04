@@ -1,39 +1,33 @@
-/* Minimalist, Wordle-inspired: one accent colour, system type, no decoration.
-   Portrait mobile is the primary target — the whole game fits one screen, never scrolls. */
+/* Line art only: paper, ink, and four suit inks. No gradients, no shadows, no
+   corner radii, no second accent — weight and position carry every state.
+   Light and dark are a straight inversion.
+   Portrait mobile is the primary target — the whole game fits one screen. */
 
 :root {
-  --bg: #fafaf9;
-  --surface: #ffffff;
-  --ink: #1a1a1a;
-  --ink-soft: #6b7280;
-  --line: #dedbd6;
-  --accent: #4f46e5;
-  --accent-ink: #ffffff;
-  --red: #c0392b;
-  --amber: #a8650a;
-  --green: #2f7d4f;
-  --radius: 10px;
-  --pile-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 6px 14px -8px rgb(0 0 0 / 0.18);
+  --paper: #ffffff;
+  --ink: #111111;
+  --soft: #8b8b86;
+
+  --suit-s: #111111;
+  --suit-h: #e02b1d;
+  --suit-d: #e08700;
+  --suit-c: #00875a;
+
+  --w: 2.5px; /* standard rule */
+  --w-bold: 6px; /* selected rule */
 
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16161a;
-    --surface: #232329;
-    --ink: #f2f2f0;
-    --ink-soft: #9b9ba3;
-    --line: #3a3a42;
-    --accent: #a78bfa;
-    --accent-ink: #1a1625;
-    --red: #ef6f61;
-    --amber: #eba854;
-    --green: #6fcf97;
-    /* A black shadow barely reads against a near-black page, so dark mode leans
-       on a stronger, softer one — separation comes from the blur, not contrast
-       with the background. */
-    --pile-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 16px -8px rgb(0 0 0 / 0.5);
+    --paper: #0d0d0d;
+    --ink: #f4f4ef;
+    --soft: #77776f;
+    --suit-s: #f4f4ef;
+    --suit-h: #ff6b5e;
+    --suit-d: #ffb43d;
+    --suit-c: #3ad795;
   }
 }
 
@@ -50,14 +44,16 @@ body {
 }
 
 body {
-  background: var(--bg);
+  background: var(--paper);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
+/* Text inside a <button> with no explicit colour otherwise falls back to the
+   UA's button colour, which disappears against the dark ground. */
 button {
   font: inherit;
   color: inherit;
@@ -72,8 +68,7 @@ button {
   grid-template-rows: auto minmax(0, 1fr) auto;
   max-width: 30rem;
   margin: 0 auto;
-  padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem 0;
-  gap: 0.5rem;
+  padding: max(0.5rem, env(safe-area-inset-top)) 0.9rem 0;
 }
 
 .main {
@@ -81,56 +76,12 @@ button {
   min-height: 0;
 }
 
-.hand-toast {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  padding: 0.6rem 1.2rem;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: 0 14px 32px -10px rgb(0 0 0 / 0.4);
-  pointer-events: none;
-  animation: toast-pop 1.1s ease-out forwards;
-  z-index: 5;
-}
-
-.hand-toast-name {
-  font-weight: 700;
-  font-size: 1rem;
-  white-space: nowrap;
-}
-
-.hand-toast-points {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-@keyframes toast-pop {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -46%) scale(0.9);
-  }
-  12% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  75% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -58%) scale(0.96);
-  }
-}
-
 /* ---------- Header ---------- */
+
+.header {
+  padding-bottom: 0.85rem;
+  border-bottom: var(--w) solid var(--ink);
+}
 
 .header-row {
   display: flex;
@@ -141,229 +92,275 @@ button {
 
 .header-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .header-date {
-  font-weight: 500;
-  color: var(--ink-soft);
+  color: var(--soft);
 }
 
 .header-tools {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.4rem;
 }
 
 .icon-btn {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.1rem;
+  height: 2.1rem;
   display: grid;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
+  padding: 0;
+  border: var(--w) solid var(--ink);
   background: transparent;
-  color: var(--ink-soft);
-  font-size: 1rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
   line-height: 1;
+}
+
+.icon-btn:focus-visible {
+  outline: var(--w) solid var(--ink);
+  outline-offset: 3px;
 }
 
 .header-stats {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 0.6rem;
-  margin-top: 0.3rem;
+  margin-top: 0.5rem;
 }
 
 .score {
-  font-size: clamp(2rem, 9vw, 3rem);
+  font-size: clamp(2.4rem, 12vw, 3.2rem);
   font-weight: 800;
-  line-height: 1;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
 }
 
 .header-meta {
-  font-size: 0.8rem;
-  color: var(--ink-soft);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--soft);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Board: 4 columns x 2 rows, portrait and landscape alike ---------- */
+/* ---------- Board: 4 columns x 2 rows ---------- */
 
 .board {
   height: 100%;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: min-content;
-  /* Anchored near the header rather than dead-centered in the flexible row below
-     it — on most phones the board is narrower than the row is tall, and centering
-     it split the leftover height into two equal, accidental-looking gaps. Grouping
-     it with the header instead leaves one deliberate gap above the hand bar. */
-  align-content: start;
-  margin-top: clamp(0.5rem, 5vh, 2rem);
-  row-gap: clamp(0.6rem, 3vh, 1.4rem);
-  column-gap: clamp(0.4rem, 2vw, 0.8rem);
+  align-content: space-evenly;
+  column-gap: 0.5rem;
 }
 
-/* Card width is derived from column width (the tight axis on a 4-wide portrait
-   board), then height follows from the aspect ratio — sizing off the row instead
-   would let the card's intrinsic size blow out the column, since row tracks are
-   sized only after column widths are resolved. The slot reserves a row underneath
-   for the pile-count label so the grid never reflows as piles drain. */
-.pile-slot {
-  width: 100%;
+/* A pile is its face card over one rule per buried card. Sizing is driven by
+   column width — the scarce axis on a 4-wide portrait board — with height
+   following from the card's aspect ratio. */
+.pile {
   display: grid;
   grid-template-rows: auto auto;
-  row-gap: 0.2rem;
-  justify-items: center;
-}
-
-.pile {
-  width: 100%;
-  aspect-ratio: 5 / 7;
-  position: relative;
-  display: grid;
-  place-items: center;
+  gap: 7px;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--pile-shadow);
-  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  border: 0;
+  background: none;
 }
 
-.pile--selected {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 2px var(--accent),
-    0 10px 18px -6px rgb(0 0 0 / 0.35);
-  transform: scale(1.04) translateY(-4px);
+.pile:disabled {
+  cursor: default;
 }
 
-.pile--card:disabled {
-  opacity: 0.45;
+.pile:focus-visible {
+  outline: var(--w) solid var(--ink);
+  outline-offset: 4px;
 }
 
-.pile--card:active:not(:disabled) {
-  /* Flattens toward the page on press, like the card is being pushed into it. */
-  transform: scale(0.97);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+.pile--spent {
+  visibility: hidden;
 }
 
-.pile--empty {
-  border-style: dashed;
-  background: transparent;
-  color: var(--ink-soft);
-  opacity: 0.5;
-  box-shadow: none;
-}
-
-.pile-count {
-  font-size: 0.65rem;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-soft);
-}
-
-.pile-card {
+.card {
+  aspect-ratio: 5 / 7;
+  border: var(--w) solid var(--ink);
+  background: var(--paper);
   display: grid;
-  place-items: center;
-  animation: flip-in 0.22s ease-out;
+  place-content: center;
+  justify-items: center;
+  gap: 1px;
+  animation: card-in 0.18s steps(3, end);
 }
 
-@keyframes flip-in {
+.card--ghost {
+  border-style: dashed;
+}
+
+@keyframes card-in {
   from {
-    transform: rotateY(80deg);
     opacity: 0;
   }
   to {
-    transform: rotateY(0deg);
     opacity: 1;
   }
 }
 
-/* ---------- Card faces ---------- */
+/* Selection reads as line weight, not colour, so the suit ink stays visible
+   and a flush is still readable while the hand is being built. */
+.pile--selected .card {
+  border-width: var(--w-bold);
+  transform: translateY(-8px);
+}
 
-.card-face {
-  display: grid;
-  place-items: center;
-  line-height: 1;
+.pile:disabled:not(.pile--spent) {
+  opacity: 0.26;
 }
 
 .card-rank {
-  font-size: clamp(1.4rem, 6.5vw, 2.1rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.card-suit {
-  font-size: clamp(1rem, 4.5vw, 1.5rem);
-  margin-top: 0.1em;
-}
-
-.card-face--suit-s {
+  font-size: clamp(1.15rem, 5.5vw, 1.7rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
   color: var(--ink);
 }
 
-.card-face--suit-h {
-  color: var(--red);
+.card-suit {
+  font-size: clamp(0.7rem, 3vw, 0.95rem);
+  line-height: 1;
 }
 
-.card-face--suit-d {
-  color: var(--amber);
+.card--suit-s .card-suit {
+  color: var(--suit-s);
 }
 
-.card-face--suit-c {
-  color: var(--green);
+.card--suit-h .card-suit {
+  color: var(--suit-h);
 }
 
-.card-face--wild {
-  color: var(--accent);
+.card--suit-d .card-suit {
+  color: var(--suit-d);
 }
 
-.card-face--wild .card-suit {
-  font-size: clamp(0.55rem, 2.5vw, 0.75rem);
-  font-weight: 700;
-  letter-spacing: 0.12em;
+.card--suit-c .card-suit {
+  color: var(--suit-c);
+}
+
+.card--wild .card-rank {
+  font-size: clamp(1rem, 4.5vw, 1.4rem);
+}
+
+.card--wild .card-suit {
+  font-size: 0.42rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Gapped wider than the rules are thick so a full pile reads as six tallies
+   rather than one hatched block — countability is what replaced the number. */
+.stack {
+  height: 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stack i {
+  display: block;
+  height: 3px;
+  background: var(--ink);
 }
 
 /* ---------- Hand bar ---------- */
 
 .handbar {
+  border-top: var(--w) solid var(--ink);
+  padding: 0.85rem 0 calc(env(safe-area-inset-bottom) + 1rem);
   display: grid;
-  gap: 0.4rem;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  gap: 0.8rem;
 }
 
-.handbar-preview {
+.readout {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0 0.9rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  font-size: 0.95rem;
+  gap: 0.75rem;
+  min-height: 3rem;
 }
 
-.handbar-category {
+.readout-hand {
+  min-width: 0;
+}
+
+.readout-name {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+
+.readout-name--idle {
+  color: var(--soft);
+}
+
+.readout-note {
+  display: block;
+  margin-top: 0.3rem;
+  min-height: 0.8rem;
+  font-size: 0.62rem;
   font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--soft);
+  white-space: pre;
 }
 
-.handbar-points {
+.readout-value {
+  text-align: right;
+}
+
+.readout-pts {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
-  color: var(--ink-soft);
 }
 
-.handbar-penalty {
-  color: var(--ink-soft);
+.readout-pts--idle {
+  color: var(--soft);
 }
 
-.handbar-hint {
-  color: var(--ink-soft);
-  font-size: 0.8rem;
+.tiers {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.4rem;
+  justify-content: flex-end;
+}
+
+.tiers i {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+}
+
+.tiers i.on {
+  background: var(--ink);
+}
+
+.tiers--idle i {
+  border-color: var(--soft);
 }
 
 .handbar-actions {
@@ -373,32 +370,93 @@ button {
 }
 
 .btn {
-  min-height: 2.9rem;
+  min-height: 3.1rem;
   padding: 0 1.1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
+  border: var(--w) solid var(--ink);
   background: transparent;
-  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 
-.btn:disabled {
-  opacity: 0.5;
+.btn:focus-visible {
+  outline: var(--w) solid var(--ink);
+  outline-offset: 3px;
 }
 
+/* The only filled shape in the layout, so the primary action is unmissable. */
 .btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .btn--primary:disabled {
   background: transparent;
-  border-color: var(--line);
-  color: var(--ink-soft);
+  border-color: var(--soft);
+  color: var(--soft);
+  cursor: default;
 }
 
-.btn:active:not(:disabled) {
-  transform: scale(0.985);
+.btn--clear {
+  width: 3.1rem;
+  padding: 0;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.btn--clear:disabled,
+.btn--ghost:disabled {
+  border-color: var(--soft);
+  color: var(--soft);
+  cursor: default;
+}
+
+/* ---------- Played-hand callout ---------- */
+
+.hand-toast {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 42%;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  z-index: 5;
+  animation: toast-pop 1.05s steps(6, end) forwards;
+}
+
+.hand-toast-name,
+.hand-toast-points {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@keyframes toast-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
 }
 
 /* ---------- Sheets (rules, results) ---------- */
@@ -410,54 +468,26 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgb(0 0 0 / 0.45);
-  padding: 0;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
 }
 
 .sheet {
-  position: relative;
   width: 100%;
   max-width: 30rem;
-  max-height: 90dvh;
+  max-height: 92dvh;
   overflow-y: auto;
-  background: var(--bg);
-  border-radius: 16px 16px 0 0;
-  padding: 1.75rem 1.25rem max(1.25rem, env(safe-area-inset-bottom));
-  animation: rise 0.2s ease-out;
-}
-
-/* The familiar bottom-sheet drag handle — signals "this dismisses downward"
-   even though the only real dismiss action is the button below. */
-.sheet::before {
-  content: '';
-  position: absolute;
-  top: 0.6rem;
-  left: 50%;
-  width: 2.25rem;
-  height: 0.25rem;
-  border-radius: 999px;
-  background: var(--line);
-  transform: translateX(-50%);
-}
-
-@keyframes rise {
-  from {
-    transform: translateY(12px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  background: var(--paper);
+  border-top: var(--w) solid var(--ink);
+  padding: 1.1rem 0.9rem max(1.1rem, env(safe-area-inset-bottom));
 }
 
 .sheet-eyebrow {
   margin: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--soft);
 }
 
 .sheet-actions {
@@ -469,14 +499,14 @@ button {
 }
 
 .rules {
-  margin: 0.75rem 0 1rem;
+  margin: 0.8rem 0 1rem;
   padding-left: 1.1rem;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  line-height: 1.55;
 }
 
 .rules li + li {
-  margin-top: 0.45rem;
+  margin-top: 0.5rem;
 }
 
 .ladder {
@@ -484,15 +514,18 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 1.25rem;
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .ladder-row {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.28rem 0;
-  border-bottom: 1px solid var(--line);
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--soft);
 }
 
 .ladder dt,
@@ -502,64 +535,69 @@ button {
 
 .ladder dd {
   font-variant-numeric: tabular-nums;
-  color: var(--ink-soft);
+  color: var(--soft);
 }
 
 /* ---------- Results ---------- */
 
 .results-score {
-  margin: 0.15rem 0 0;
-  font-size: 3.25rem;
+  margin: 0.3rem 0 0;
+  font-size: 3.4rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
 }
 
 .results-best {
-  margin: 0.35rem 0 0;
-  font-size: 0.85rem;
-  color: var(--ink-soft);
+  margin: 0.5rem 0 0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--soft);
 }
 
 .results-list {
   list-style: none;
   margin: 1rem 0 0;
   padding: 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .results-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid var(--line);
+  gap: 0.7rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--soft);
 }
 
-.results-cards {
+.results-tier {
   display: inline-flex;
-  gap: 2px;
+  gap: 3px;
 }
 
-.pip {
-  width: 7px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--ink-soft);
+.results-tier i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--ink);
 }
 
-.pip--empty {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line);
+.results-tier i.on {
+  background: var(--ink);
 }
 
 .results-points {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
 }
 
-/* ---------- Landscape / wide: same 4x2 board, roomier shell ---------- */
+/* ---------- Landscape / wide ---------- */
 
 @media (orientation: landscape) and (max-height: 34rem) {
   .app {
@@ -567,30 +605,39 @@ button {
   }
 
   .score {
-    font-size: 1.6rem;
+    font-size: 1.8rem;
   }
 
-  /* Portrait sizes the card off column width because columns are the scarce axis
-     there. In landscape it flips: height is scarce and width is abundant, so
-     sizing off column width (as above) would overshoot the available height.
-     Drive off the row instead, the same way the portrait rule drives off the
-     column — each picks whichever axis is actually constrained. */
+  /* Portrait sizes cards off column width because columns are scarce there.
+     In landscape height is scarce instead, so the *pile* becomes the
+     height-driven element and the card and rules both take its full width —
+     sizing the card directly would let the rules span the whole column while
+     the card sat narrower, and the two would stop lining up. */
   .board {
-    grid-auto-rows: unset;
     grid-template-rows: repeat(2, minmax(0, 1fr));
     align-content: stretch;
-    margin-top: 0;
-  }
-
-  .pile-slot {
-    height: 100%;
-    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   .pile {
-    width: auto;
     height: 100%;
-    max-width: 100%;
+    width: auto;
+    aspect-ratio: 5 / 8.6;
+    justify-self: center;
+    align-content: start;
+    gap: 4px;
+  }
+
+  .card {
+    width: 100%;
+  }
+
+  .stack {
+    height: 18px;
+    gap: 2px;
+  }
+
+  .stack i {
+    height: 2px;
   }
 }
 

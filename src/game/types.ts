@@ -59,6 +59,27 @@ export const CATEGORY_LABELS: Record<HandCategory, string> = {
   HIGH_CARD: 'High Card',
 };
 
+/**
+ * Presentation tier, 0 (weakest) to 4 (strongest). Collapses the ten-rung
+ * category ladder into five steps that can be shown as countable cells in the
+ * UI and as coloured blocks in the share text — the two places that need a
+ * coarse "how good was that?" without printing a points table.
+ */
+export const CATEGORY_TIER: Record<HandCategory, 0 | 1 | 2 | 3 | 4> = {
+  HIGH_CARD: 0,
+  PAIR: 1,
+  TWO_PAIR: 1,
+  THREE_OF_A_KIND: 2,
+  STRAIGHT: 2,
+  FLUSH: 2,
+  FULL_HOUSE: 3,
+  FOUR_OF_A_KIND: 3,
+  STRAIGHT_FLUSH: 4,
+  ROYAL_FLUSH: 4,
+};
+
+export const TIER_COUNT = 5;
+
 export const SUITS: Suit[] = ['S', 'H', 'D', 'C'];
 export const RANKS: Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
