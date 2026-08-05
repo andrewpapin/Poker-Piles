@@ -161,7 +161,6 @@ export default function App() {
         dateKey={state.dateKey}
         total={state.total}
         handsPlayed={state.hands.length}
-        lastHand={state.hands.length > 0 ? state.hands[state.hands.length - 1] : null}
         theme={theme}
         onNewGame={handleNewGame}
         onHelp={() => setShowHelp(true)}

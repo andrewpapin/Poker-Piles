@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatPuzzleDate } from '../game/share';
 import type { Theme } from '../game/storage';
-import type { HandResult } from '../game/types';
 
 type Props = {
   dateKey: string;
   total: number;
   handsPlayed: number;
-  lastHand: HandResult | null;
   theme: Theme;
   onNewGame: () => void;
   onHelp: () => void;
@@ -48,7 +46,6 @@ export function Header({
   dateKey,
   total,
   handsPlayed,
-  lastHand,
   theme,
   onNewGame,
   onHelp,
@@ -172,9 +169,7 @@ export function Header({
           {displayTotal}
         </span>
         <span className="header-meta">
-          {lastHand
-            ? `Hand ${handsPlayed} · ${lastHand.score} pt${lastHand.score === 1 ? '' : 's'}`
-            : 'Ready to play'}
+          {handsPlayed} hand{handsPlayed === 1 ? '' : 's'} played
         </span>
       </div>
     </header>
