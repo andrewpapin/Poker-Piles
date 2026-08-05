@@ -6,17 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Poker Piles is a daily, single-player poker puzzle for the browser (like Wordle). Fifty-six
 cards — a standard deck plus four wilds — are dealt into 8 piles of 7, only the top card of
-each pile face up. The player plays up to 5 top cards at a time as a poker hand; every pile
-drawn from flips its next card, piles skipped stay put, and play continues until the deck runs
-out. The puzzle is derived entirely from the UTC date, so the same deal is served to everyone
-and resets at midnight UTC. Fully client-side: no backend, no accounts, no leaderboard.
+each pile face up. The player plays up to 5 cards at a time as a poker hand, drawn from the
+pile tops and from two **hold slots** where a card can be banked for a later hand. Every pile
+drawn from flips its next card, piles skipped stay put, and play continues until the board is
+empty. The puzzle is derived entirely from the UTC date, so the same deal is served to everyone
+and resets at midnight UTC. Fully client-side: no backend, no accounts, no leaderboard, no
+network I/O of any kind at runtime.
 
 ## Commands
 
 ```bash
 npm install
 npm run dev        # dev server
-npm test           # run the vitest suite once
+npm test           # run the vitest suite once (72 tests, ~7s)
 npm run test:watch # vitest in watch mode
 npm run build      # tsc -b (typecheck) then vite build into dist/
 npm run preview    # serve the built bundle
@@ -30,42 +32,87 @@ npx vitest run src/game/evaluator.test.ts
 npx vitest run -t "some test name"
 ```
 
-There is no separate lint script — `npm run build` is the source of truth for type
+Nearly all of the suite's wall-clock time is `evaluator.reference.test.ts`, which brute-forces
+wild resolution against an unrestricted search; the other four files together run in well under
+a second. When iterating on non-evaluator code, filter it out rather than waiting on it.
+
+There is no lint script and no formatter config — `npm run build` is the source of truth for
 correctness (`tsc -b` with `strict`, `noUnusedLocals`, `noUnusedParameters`,
-`noFallthroughCasesInSwitch` all on in `tsconfig.app.json`).
+`noFallthroughCasesInSwitch` all on in `tsconfig.app.json`). Match the surrounding style by
+hand: single quotes, semicolons, 2-space indent, ~100 column comments.
+
+## Repository layout
+
+```
+src/game/        pure game logic — no React, no DOM (except share.ts's clipboard fallback)
+src/components/  presentational React components — no game rules
+src/App.tsx      the only stateful component: one useReducer plus a little local UI state
+src/styles.css   the entire stylesheet, ~1500 lines, hand-written, no CSS framework
+src/fonts/       the self-hosted Outfit variable subset (woff2)
+BACKLOG.md       prioritized audit findings, items numbered PP-1..PP-23 (stable IDs)
+```
 
 ## Architecture
 
 The core design principle: **game logic is pure and UI-free**, so it is fully testable without
 touching React or the DOM. Everything under `src/game/` has zero knowledge of components; every
 React component under `src/components/` only renders state and dispatches actions — no game
-rules live in components.
+rules live in components. The one place this is bent is `HandBar`, which calls `evaluateHand`
+directly to preview the live selection; it reads the evaluator, it does not re-implement it.
 
 `src/game/` modules and how they compose:
 
 | Module | Responsibility |
 | --- | --- |
 | `rng.ts` | `xmur3` string hash + `mulberry32` PRNG; also `todayKey()`, the UTC date string that seeds everything |
-| `deck.ts` | `buildDeck()` (canonical 56-card deck), `shuffle()`, `dealPiles(dateKey)` — the whole deal is a pure function of the date |
+| `deck.ts` | `buildDeck()` (canonical 56-card deck), `shuffle()` (Fisher-Yates), `dealPiles(dateKey)`, `topCard()` — the whole deal is a pure function of the date |
 | `evaluator.ts` | `evaluateHand()`: hand categorization and optimal wild-card resolution, memoized via a cache keyed on sorted card identities |
-| `reducer.ts` | `gameReducer`/`GameState`/`GameAction`: selection, hold slots, submitting a hand, giving up, detecting end-of-run |
-| `share.ts` | Spoiler-free share text: a block grid of per-hand tiers (never a rank, suit or category name); Web Share API with a clipboard (and `execCommand` textarea) fallback |
-| `storage.ts` | localStorage persistence for stats and an in-progress run; every access is try/catch-guarded since Safari private mode throws on write |
-| `types.ts` | Shared types (`Card`, `Pile`, `HandCategory`, `HandResult`, `GameState` shape helpers) and constants (`CATEGORY_POINTS`, `CATEGORY_TIER`, `PILE_COUNT`, `PILE_SIZE`, `MAX_HAND_SIZE`, `WILD_COUNT`) |
+| `reducer.ts` | `gameReducer`/`GameState`/`GameAction`, plus the derived selectors (`selectedCards`, `selectedPileIndices`, `selectedHeldIndices`, `heldCount`, `openHoldSlot`, `cardsRemaining`, `livePileCount`) |
+| `share.ts` | `formatPuzzleDate()` and `buildShareText()` (spoiler-free: title, score, link — never a rank, suit or category name); `shareResults()` uses the Web Share API with a clipboard, then `execCommand` textarea, fallback |
+| `storage.ts` | localStorage persistence for daily stats, the first-visit help flag, and an in-progress run; every access is try/catch-guarded since Safari private mode throws on write |
+| `types.ts` | Shared types (`Card`, `Pile`, `HandCategory`, `HandResult`) and constants (`CATEGORY_POINTS`, `CATEGORY_LABELS`, `CATEGORY_TIER`, `TIER_COUNT`, `FIVE_CARD_ONLY`, `PILE_COUNT`, `PILE_SIZE`, `MAX_HAND_SIZE`, `WILD_COUNT`, `HOLD_SLOT_COUNT`, `RANK_LABELS`, `RANK_WORDS`, `SUIT_GLYPHS`) |
+
+`src/components/`:
+
+| Component | Renders |
+| --- | --- |
+| `Header.tsx` | Title, puzzle date, animated score count-up, and the give-up / help / restart icon buttons |
+| `Board.tsx` | The 4×2 grid of piles; decides per-pile `disabled` from selection capacity and hold-arming |
+| `Pile.tsx` | One pile: the offset card backs, the face-up `CardFace`, and the remaining-count chip |
+| `CardFace.tsx` | A single card face (rank index, drawn suit pip, spelled-out rank wordmark) and `cardLabel()` for a11y strings |
+| `HoldSlots.tsx` | The two hold slots — an occupied slot is a selectable card, an empty one is an armable "+" target |
+| `HandBar.tsx` | Live readout of the current selection (category, points, five-step tier meter) and the Clear / Play hand buttons |
+| `HowToPlay.tsx` | The rules sheet: a five-bullet lockup plus the full scoring ladder, rendered from `CATEGORY_POINTS` |
+| `Results.tsx` | The end-of-run sheet: score, per-category counts, per-hand list, Play again / Share |
 
 Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, holds it in a
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
-`livePileCount`) down to `Board`, `HandBar`, `Header`, `Results`. All mutation goes through
-`dispatch` with the `GameAction` variants (`toggle`, `toggleHeld`, `hold`, `clear`, `submit`,
-`giveUp`, `newGame`). Every
-state change is persisted to localStorage via `saveGame` in a `useEffect`, so a backgrounded
-tab silently picks its run back up.
+`selectedPileIndices`, `selectedHeldIndices`, `livePileCount`, `heldCount`) down. All game
+mutation goes through `dispatch` with the seven `GameAction` variants (`toggle`, `toggleHeld`,
+`hold`, `clear`, `submit`, `giveUp`, `newGame`). Every state change is persisted to localStorage
+via `saveGame` in a `useEffect`, so a backgrounded tab silently picks its run back up.
+
+`App.tsx` also holds three pieces of purely-presentational state that deliberately do **not**
+live in the reducer, because none of them affect the game: `showHelp`, the scored-hand `toast`,
+and `armedHoldSlot`. That last one is the interaction state behind the two-way hold gesture —
+tap a card then an empty slot, or tap an empty slot then a card. The reducer only ever sees the
+resulting `hold` action with a resolved slot index.
 
 ### Key invariants worth knowing before touching game logic
 
 - **A pile is a stack**: the *last* array element is the face-up top card (`topCard()` in
   `deck.ts`). Only the top card of a pile is ever selectable, so "at most one card per pile" in
   a hand holds by construction — the reducer doesn't need to enforce it separately.
+- **The 5-card cap is shared across origins.** A selection entry is
+  `{ origin: 'pile' | 'held', index }`, and `MAX_HAND_SIZE` bounds the combined list, so two
+  held cards plus three pile cards is a legal full hand.
+- **A hand can be played from hold slots alone.** The run is complete only when every pile *and*
+  every hold slot is empty (`submit`'s `exhausted` check) — emptying the board while a card is
+  still banked must leave the game playing. There is a reducer test pinning this; it is the
+  easiest end-of-run bug to reintroduce.
+- **`hold` can never end the game**, since banking a card only ever fills a slot, so that branch
+  deliberately leaves `status` untouched. It *does* drop any selection pointing at the source
+  pile, otherwise a stale entry would silently start referring to the card revealed underneath.
 - **Wilds are fully wild** and always resolved to whichever rank/suit scores highest
   (`bestCategory5`/`bestCategoryPartial` in `evaluator.ts`). The candidate-suit search is
   restricted to suits already present among the natural cards in the hand — a flush must land
@@ -78,8 +125,9 @@ tab silently picks its run back up.
   Kind down to High Card), because a straight, flush or full house is inherently a 5-card
   pattern. That split lives in `categorize5` vs. `categorizePartial`, and `bestCategory5` vs.
   `bestCategoryPartial`; `FIVE_CARD_ONLY` in `types.ts` names the categories it excludes. The
-  rules sheet no longer marks those rows — its copy was cut back to the five-bullet lockup, so
-  this split is currently undocumented in the UI.
+  rules sheet does not mark those rows — its copy was cut back to the five-bullet lockup, so the
+  only place the split surfaces in the UI is `HandBar`'s "no straights or flushes" note, which
+  appears once pile count plus held count drops below 5.
 - **High Card is worth 0, and that is load-bearing.** Because every one of the 56 cards is
   eventually played, the quantity that governs strategy is points *per card*, not per hand. A
   non-zero High Card would make chopping a run into single-card hands score better than playing
@@ -94,12 +142,82 @@ tab silently picks its run back up.
   remainder — under this scoring they would all be worth 0 and would bury the run's real hands.
 - Scoring table (`CATEGORY_POINTS` in `types.ts`): Royal Flush 200, Straight Flush 100, Four of
   a Kind 60, Full House 40, Flush 30, Straight 25, Three of a Kind 15, Two Pair 10, Pair 5, High
-  Card 0.
+  Card 0. Declaration order is best-to-worst and both `HowToPlay` and `Results` rely on it
+  (`Object.keys(CATEGORY_POINTS)`) — reordering the object reorders the UI.
+
+### Persistence
+
+Keys are namespaced and versioned: `pokerpiles:v2:stats`, `pokerpiles:v2:game`,
+`pokerpiles:v2:seenHelp`. The bump to `v2` came with the scoring change — a run or best score
+recorded under the old size-scaled rules isn't comparable to one scored under these, so the old
+keys were abandoned rather than migrated. **Any future change that alters what a score means
+should bump the prefix again** rather than migrate.
+
+Within a version, `loadGame` migrates rather than discards where it can: saves predating hold
+slots lack `held` and store `selected` as bare pile-index numbers, and both are repaired in
+place so a returning player doesn't lose a run. Its validation is top-level only, which is a
+known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGame` both compare
+`dateKey` and start fresh on mismatch — so there is no streak or cross-day history by design.
+
+## UI and styling conventions
+
+- **One stylesheet, no framework.** `src/styles.css` is organised into commented sections
+  (Shell, Header, Board, Card, Hold tray, Hand bar, Sheets, Results, Motion, then the landscape
+  and desktop layouts, then reduced motion). Tokens are CSS custom properties on `:root`, with a
+  designed dark palette under `prefers-color-scheme: dark` — it is not an inversion, card faces
+  go dark too.
+- **The whole game fits one screen at every size, and the page never scrolls**
+  (`html, body { overflow: hidden }`). This is guaranteed by `--cw`, the width of one card,
+  derived in `.app` as the `min()` of a width-derived and a height-derived value so whichever
+  axis is scarce wins. Everything else — card radius, pip size, stack offsets, hold-slot size —
+  is computed from `--cw` in `em`/`calc`. If you add or resize chrome, update the `--header-h` /
+  `--holds-h` / `--handbar-h` estimates that feed `--board-h`.
+- **Suits and icons are drawn as inline SVG paths, never typed as Unicode.** `♠♥♦♣` are missing
+  from most webfont latin subsets, and several mobile platforms promote `♥`/`♦` to colour emoji.
+  Same reasoning for the restart/help/flag glyphs in `Header`. (`SUIT_GLYPHS` still exists in
+  `types.ts` but nothing renders it.)
+- **The 5-step tier ramp (`CATEGORY_TIER`, `TIER_COUNT`, `--tier-0..4`) is shared vocabulary**
+  between `HandBar`'s live meter and `Results`' per-hand rows, so a hand looks the same colour
+  wherever it appears. It exists to convey "how good was that?" without printing a points table.
+- **The accent (indigo) is deliberately outside the four suit hues**, so "selected" can never be
+  misread as a suit.
+- Accessibility is partial and known-incomplete: `aria-label`/`aria-pressed` are used
+  throughout, but the two overlays declare `aria-modal` without implementing focus trapping or
+  Escape, and scoring is not announced to assistive tech. See BACKLOG PP-3 through PP-5 before
+  "fixing" these piecemeal.
+- Motion respects `prefers-reduced-motion` by zeroing durations rather than removing animations,
+  so fill modes still land and elements don't get stranded mid-transition.
+
+## Testing conventions
+
+Tests are colocated with the module (`src/game/foo.test.ts`) and cover `game/` only — there are
+no component or integration tests yet (BACKLOG PP-15), and `storage.ts` is untested (PP-14).
+They are plain vitest with no DOM environment, which is only possible because `game/` is pure;
+keep it that way. `evaluator.reference.test.ts` is a property-style oracle test rather than an
+example test — it exists specifically to guard the wild-resolution shortcut, so it should be
+kept passing rather than trimmed for speed.
 
 ## Deployment
 
 Pushes to `main` build and publish to GitHub Pages via `.github/workflows/deploy.yml` (runs
-`npm test` then `npm run build` before deploying). The site serves from
-`https://andrewpapin.github.io/Poker-Piles/`, which is why `vite.config.ts` sets
-`base: '/Poker-Piles/'` — GitHub Pages paths are case-sensitive and must match the repo name
-exactly.
+`npm ci`, `npm test`, then `npm run build` before deploying). Nothing runs on pull requests yet
+(BACKLOG PP-13), so a PR can merge without checks — run `npm test && npm run build` locally
+before proposing one. The site serves from `https://andrewpapin.github.io/Poker-Piles/`, which
+is why `vite.config.ts` sets `base: '/Poker-Piles/'` — GitHub Pages paths are case-sensitive and
+must match the repo name exactly. For the same reason the manifest and icon are referenced with
+relative paths in `index.html`, and the favicon is an inline data URI (no path to get wrong).
+
+## Working in this repo
+
+- `BACKLOG.md` is the standing to-do list, written from a full audit. Items have stable IDs
+  (`PP-1`..`PP-23`) meant to be cited in commit messages and PR titles. It also records a
+  **"Verified sound — do not re-audit"** list and a **"Deliberate non-goals"** list (predictable
+  daily seed, no backend/accounts/sync) — check both before reporting something as a bug. Note
+  that a few of its references have themselves aged: it describes a `finishGame` action that has
+  since been replaced by `giveUp`.
+- `README.md` is currently stale on the rules — it still documents High Card as 1 point, claims
+  short hands score half, and predates hold slots entirely. Treat `types.ts` and this file as
+  authoritative, and fix the README if you touch scoring copy.
+- Commit messages are sentence-case imperative prose, no prefixes ("Score hands by category
+  alone, not by hand size", "Move the remaining-count chip off the card, into the stack's
+  bottom-right"). Match that rather than a `type(scope):` convention.
