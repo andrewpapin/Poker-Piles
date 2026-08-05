@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { buildShareText, shareResults } from '../game/share';
-import { CATEGORY_LABELS, CATEGORY_TIER, TIER_COUNT } from '../game/types';
-import type { HandResult } from '../game/types';
+import { CATEGORY_LABELS, CATEGORY_POINTS, CATEGORY_TIER, TIER_COUNT } from '../game/types';
+import type { HandCategory, HandResult } from '../game/types';
 import type { DailyStats } from '../game/storage';
+
+// Best-to-worst order for the summary, matching CATEGORY_POINTS' declaration order.
+const CATEGORY_ORDER = Object.keys(CATEGORY_POINTS) as HandCategory[];
 
 type Props = {
   dateKey: string;
@@ -22,6 +25,11 @@ export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
     setTimeout(() => setShareLabel('Share'), 2000);
   }
 
+  const counts = new Map<HandCategory, number>();
+  for (const hand of hands) {
+    counts.set(hand.category, (counts.get(hand.category) ?? 0) + 1);
+  }
+
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Run complete">
       <div className="sheet">
@@ -31,6 +39,15 @@ export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
           {hands.length} hand{hands.length === 1 ? '' : 's'}
           {stats && stats.plays > 1 ? ` · best today ${stats.bestScore}` : ''}
         </p>
+
+        <ul className="results-summary">
+          {CATEGORY_ORDER.filter((category) => counts.has(category)).map((category) => (
+            <li key={category} className="results-summary-chip" data-tier={CATEGORY_TIER[category]}>
+              <span className="results-summary-count">{counts.get(category)}</span>
+              <span className="results-summary-name">{CATEGORY_LABELS[category]}</span>
+            </li>
+          ))}
+        </ul>
 
         <ol className="results-list">
           {hands.map((hand, i) => (
