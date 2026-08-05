@@ -77,8 +77,9 @@ tab silently picks its run back up.
   categories are reachable: fewer than 5 cards is restricted to rank-based categories (Four of a
   Kind down to High Card), because a straight, flush or full house is inherently a 5-card
   pattern. That split lives in `categorize5` vs. `categorizePartial`, and `bestCategory5` vs.
-  `bestCategoryPartial`; `FIVE_CARD_ONLY` in `types.ts` names the categories it excludes, and the
-  rules sheet marks them from that same set.
+  `bestCategoryPartial`; `FIVE_CARD_ONLY` in `types.ts` names the categories it excludes. The
+  rules sheet no longer marks those rows — its copy was cut back to the five-bullet lockup, so
+  this split is currently undocumented in the UI.
 - **High Card is worth 0, and that is load-bearing.** Because every one of the 56 cards is
   eventually played, the quantity that governs strategy is points *per card*, not per hand. A
   non-zero High Card would make chopping a run into single-card hands score better than playing

@@ -54,7 +54,7 @@ export const CATEGORY_POINTS: Record<HandCategory, number> = {
 /**
  * Categories that are 5-card patterns by definition, and so are unreachable in
  * a shorter hand however the cards fall. `categorizePartial` never returns one
- * (there is a test pinning that), and the rules sheet marks these rows.
+ * (there is a test pinning that).
  */
 export const FIVE_CARD_ONLY: ReadonlySet<HandCategory> = new Set<HandCategory>([
   'ROYAL_FLUSH',
