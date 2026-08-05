@@ -184,9 +184,9 @@ button {
   --cw: min(var(--cw-w), var(--cw-h), 9rem);
 
   --hold-cw: calc(var(--cw) * 0.6);
-  --stack-step: calc(var(--cw) * 0.05);
+  --stack-step: calc(var(--cw) * 0.04);
   --stack-taper: calc(var(--cw) * 0.008);
-  --stack-reserve: calc(2 * var(--stack-step));
+  --stack-reserve: calc(6 * var(--stack-step));
   --r-card: clamp(7px, calc(var(--cw) * 0.11), 16px);
 
   height: 100vh; /* Safari <= 15.3 */
@@ -364,7 +364,7 @@ button {
   outline-offset: 4px;
 }
 
-/* The reserve is a constant two steps whatever the real depth, so a pile of
+/* The reserve is a constant six steps whatever the real depth, so a pile of
    seven and a pile of one occupy identical boxes and the board never reflows
    as it drains. */
 .pile-stack {
@@ -387,9 +387,9 @@ button {
   z-index: 1;
 }
 
-/* Depth reads as 0-2 bare hairline outlines peeking out behind and below the
-   face card, standing in for the exact buried count without spelling it out
-   as a number or a fully rendered card back. */
+/* One bare hairline outline per buried card, peeking out behind and below
+   the face card — the exact remaining count reads at a glance without a
+   numeral or a fully rendered card back. */
 .pile-backs i {
   position: absolute;
   left: calc(var(--i) * var(--stack-taper));

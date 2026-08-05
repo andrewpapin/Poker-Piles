@@ -27,18 +27,17 @@ type Props = {
 };
 
 /**
- * A subtle depth cue: 0-2 hairline-thin edges staggered behind and below the
- * face card, standing in for the exact buried count rather than spelling it
- * out. Each edge is absolutely positioned inside a zero-height frame, so
- * however many there are they contribute nothing to layout — the pile's
- * height comes from the face card plus a constant reserve, and the board
- * never reflows as piles drain.
+ * A subtle depth cue: one hairline-thin edge per buried card, staggered
+ * behind and below the face card, so the exact remaining count reads at a
+ * glance without a numeral. Each edge is absolutely positioned inside a
+ * zero-height frame, so however many there are they contribute nothing to
+ * layout — the pile's height comes from the face card plus a constant
+ * reserve, and the board never reflows as piles drain.
  */
 function StackEdges({ buried }: { buried: number }) {
-  const edgeCount = buried === 0 ? 0 : buried <= 3 ? 1 : 2;
   return (
     <span className="pile-backs" aria-hidden="true">
-      {Array.from({ length: edgeCount }, (_, i) => (
+      {Array.from({ length: buried }, (_, i) => (
         <i key={i} style={{ '--i': i } as CSSProperties} />
       ))}
     </span>
