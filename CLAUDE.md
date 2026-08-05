@@ -88,9 +88,10 @@ directly to preview the live selection; it reads the evaluator, it does not re-i
 Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, holds it in a
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
 `selectedPileIndices`, `selectedHeldIndices`, `livePileCount`, `heldCount`) down. All game
-mutation goes through `dispatch` with the seven `GameAction` variants (`toggle`, `toggleHeld`,
-`hold`, `clear`, `submit`, `giveUp`, `newGame`). Every state change is persisted to localStorage
-via `saveGame` in a `useEffect`, so a backgrounded tab silently picks its run back up.
+mutation goes through `dispatch` with the eight `GameAction` variants (`toggle`, `toggleHeld`,
+`hold`, `clear`, `submit`, `giveUp`, `markRecorded`, `newGame`). Every state change is persisted
+to localStorage via `saveGame` in a `useEffect`, so a backgrounded tab silently picks its run
+back up.
 
 `App.tsx` also holds three pieces of purely-presentational state that deliberately do **not**
 live in the reducer, because none of them affect the game: `showHelp`, the scored-hand `toast`,
@@ -191,7 +192,9 @@ known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGa
 ## Testing conventions
 
 Tests are colocated with the module (`src/game/foo.test.ts`) and cover `game/` only — there are
-no component or integration tests yet (BACKLOG PP-15), and `storage.ts` is untested (PP-14).
+no component or integration tests yet (BACKLOG PP-15). `storage.ts` is covered by
+`storage.test.ts` against a `Map`-backed `localStorage` stub (round-trip, rejection paths,
+migrations, and the private-mode throw paths); PP-15's App-level wiring is still open.
 They are plain vitest with no DOM environment, which is only possible because `game/` is pure;
 keep it that way. `evaluator.reference.test.ts` is a property-style oracle test rather than an
 example test — it exists specifically to guard the wild-resolution shortcut, so it should be
@@ -200,9 +203,9 @@ kept passing rather than trimmed for speed.
 ## Deployment
 
 Pushes to `main` build and publish to GitHub Pages via `.github/workflows/deploy.yml` (runs
-`npm ci`, `npm test`, then `npm run build` before deploying). Nothing runs on pull requests yet
-(BACKLOG PP-13), so a PR can merge without checks — run `npm test && npm run build` locally
-before proposing one. The site serves from `https://andrewpapin.github.io/Poker-Piles/`, which
+`npm ci`, `npm test`, then `npm run build` before deploying). Pull requests run the same
+three steps via `.github/workflows/ci.yml` (no deploy step), so a broken PR fails its check
+rather than merging silently. The site serves from `https://andrewpapin.github.io/Poker-Piles/`, which
 is why `vite.config.ts` sets `base: '/Poker-Piles/'` — GitHub Pages paths are case-sensitive and
 must match the repo name exactly. For the same reason the manifest and icon are referenced with
 relative paths in `index.html`, and the favicon is an inline data URI (no path to get wrong).

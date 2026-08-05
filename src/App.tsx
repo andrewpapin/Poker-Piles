@@ -49,10 +49,13 @@ export default function App() {
   }, [state]);
 
   useEffect(() => {
-    // Guarded by state identity so a completed run is only ever counted once.
-    if (state.status !== 'complete' || recordedRef.current === state) return;
+    // `state.recorded` guards across reloads (it's persisted); `recordedRef`
+    // additionally guards within a single session against StrictMode's
+    // double-invoke of this effect racing the `markRecorded` dispatch below.
+    if (state.status !== 'complete' || state.recorded || recordedRef.current === state) return;
     recordedRef.current = state;
     setStats(recordRun(state.dateKey, state.total));
+    dispatch({ type: 'markRecorded' });
   }, [state]);
 
   useEffect(() => {
