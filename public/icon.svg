@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Full-bleed ground with the mark inside the maskable safe zone (centre 80%). -->
+  <rect width="24" height="24" fill="#3a4bd8" />
+  <path
+    transform="translate(5.2 5.2) scale(0.567)"
+    d="M12 2.2C12 2.2 4.6 8.6 4.6 13.1c0 2.6 1.9 4.5 4.3 4.5 1.2 0 2.2-.5 2.8-1.2-.2 2.1-1.1 3.8-2.5 4.9v.5h5.6v-.5c-1.4-1.1-2.3-2.8-2.5-4.9.6.7 1.6 1.2 2.8 1.2 2.4 0 4.3-1.9 4.3-4.5C19.4 8.6 12 2.2 12 2.2z"
+    fill="#fbf7f0"
+  />
+</svg>

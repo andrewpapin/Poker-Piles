@@ -1,33 +1,122 @@
-/* Line art only: paper, ink, and four suit inks. No gradients, no shadows, no
-   corner radii, no second accent — weight and position carry every state.
-   Light and dark are a straight inversion.
-   Portrait mobile is the primary target — the whole game fits one screen. */
+/* Poker Piles — a warm, tactile daily puzzle.
+   Paper-cream ground, sunken trays, real cards with corner indices and drawn
+   pips, one indigo accent that is deliberately outside the four suit hues so
+   "selected" can never be mistaken for a suit. Portrait mobile is the primary
+   target and the whole game fits one screen at every size — see the --cw
+   derivation in .app, which is what actually guarantees that. */
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('./fonts/outfit-latin.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  --paper: #ffffff;
-  --ink: #111111;
-  --soft: #8b8b86;
+  --font: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --suit-s: #111111;
-  --suit-h: #e02b1d;
-  --suit-d: #e08700;
-  --suit-c: #00875a;
+  --surface: #fbf7f0;
+  --surface-sunk: #f2ebdf;
+  --surface-raise: #ffffff;
 
-  --w: 2.5px; /* standard rule */
-  --w-bold: 6px; /* selected rule */
+  --card: #ffffff;
+  --card-ink: #1e1b18;
+  --card-back: #e7ded0;
+  --card-back-line: #d5c8b3;
+
+  --hairline: #e4dbcc;
+  --hairline-strong: #cfc3af;
+
+  --ink: #1e1b18;
+  --ink-2: #6e655c;
+  --ink-3: #a79c8e;
+
+  --accent: #3a4bd8;
+  --accent-hi: #2e3cb8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e8eafd;
+
+  /* Spade / heart / diamond / club. Heart and diamond are separated on hue
+     (crimson vs ochre) rather than lightness, because at pip size a red/orange
+     pair collapses into one colour. */
+  --suit-s: #23201c;
+  --suit-h: #be2e42;
+  --suit-d: #b26a0c;
+  --suit-c: #26694c;
+
+  /* Hand-strength ramp, matched to the emoji blocks in the share text so the
+     score card and the pasted grid read as the same artefact. */
+  --tier-0: #ded6c6;
+  --tier-1: #e8c33e;
+  --tier-2: #e2853a;
+  --tier-3: #d2483f;
+  --tier-4: #8a5bc4;
+
+  --r-panel: 20px;
+  --r-btn: 14px;
+  --r-chip: 999px;
+
+  --sh-card: 0 1px 1.5px rgba(30, 27, 24, 0.07), 0 3px 8px -3px rgba(30, 27, 24, 0.13);
+  --sh-lift: 0 2px 3px rgba(30, 27, 24, 0.1), 0 12px 22px -8px rgba(30, 27, 24, 0.28);
+  --sh-panel: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(30, 27, 24, 0.05);
+  --sh-sheet: 0 -10px 40px -12px rgba(30, 27, 24, 0.32);
+  --sh-btn: 0 1px 0 rgba(30, 27, 24, 0.1), 0 3px 10px -3px rgba(58, 75, 216, 0.4);
+
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-lift: 260ms;
+  --t-sheet: 380ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   color-scheme: light dark;
 }
 
+/* Not an inversion — a designed dark. Card faces go dark too: eight bright
+   white rectangles on a black ground is the worst thing a card game can do to
+   someone playing in bed. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0d0d0d;
-    --ink: #f4f4ef;
-    --soft: #77776f;
-    --suit-s: #f4f4ef;
-    --suit-h: #ff6b5e;
-    --suit-d: #ffb43d;
-    --suit-c: #3ad795;
+    --surface: #141311;
+    --surface-sunk: #1b1917;
+    --surface-raise: #201e1b;
+
+    --card: #26241f;
+    --card-ink: #f3eee4;
+    --card-back: #1a1916;
+    --card-back-line: #302d26;
+
+    --hairline: #35312a;
+    --hairline-strong: #4a4238;
+
+    --ink: #f3eee4;
+    --ink-2: #a79e90;
+    --ink-3: #6e675c;
+
+    --accent: #838cff;
+    --accent-hi: #9aa1ff;
+    --accent-ink: #12132a;
+    --accent-soft: #262844;
+
+    --suit-s: #ede7da;
+    --suit-h: #ff7183;
+    --suit-d: #f0a93c;
+    --suit-c: #4fc28c;
+
+    --tier-0: #46413a;
+    --tier-1: #e8c33e;
+    --tier-2: #eb9350;
+    --tier-3: #e46257;
+    --tier-4: #a377da;
+
+    /* Shadows do almost nothing on a dark ground; top hairlines carry the
+       elevation instead. */
+    --sh-card: 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 14px -8px rgba(0, 0, 0, 0.75);
+    --sh-lift: 0 1px 0 rgba(255, 255, 255, 0.09), 0 14px 26px -10px rgba(0, 0, 0, 0.85);
+    --sh-panel: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --sh-sheet: 0 -10px 40px -12px rgba(0, 0, 0, 0.7);
+    --sh-btn: 0 2px 10px -3px rgba(131, 140, 255, 0.45);
   }
 }
 
@@ -44,64 +133,119 @@ body {
 }
 
 body {
-  background: var(--paper);
+  background: var(--surface);
   color: var(--ink);
-  font-family: system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-/* Text inside a <button> with no explicit colour otherwise falls back to the
-   UA's button colour, which disappears against the dark ground. */
 button {
   font: inherit;
   color: inherit;
   cursor: pointer;
 }
 
-/* ---------- Shell: header / board / hand bar, no page scroll ---------- */
+/* ---------- Shell ----------
+
+   Everything downstream is sized from --cw, the width of one card. It is the
+   *smaller* of a width-derived and a height-derived value, so whichever axis is
+   scarce wins and the board can never be the thing that overflows a viewport
+   that is forbidden to scroll. The chrome heights below are deliberate slight
+   over-estimates: the grid rows stay `auto` (so nothing is ever clipped), and
+   over-estimating only costs a couple of pixels of card size. */
 
 .app {
+  --shell-max: 30rem;
+  --pad-x: 0.7rem;
+  --board-pad: 0.7rem;
+  --safe-top: max(0.5rem, env(safe-area-inset-top));
+  --safe-bot: max(0.75rem, env(safe-area-inset-bottom));
+
+  --header-h: 5.6rem;
+  --holds-h: 5.75rem;
+  --handbar-h: 9rem;
+
+  --cols: 4;
+  --rows: 2;
+  --gap-x: 0.5rem;
+  --gap-y: 0.65rem;
+
+  /* card (1.4 x cw, from the 5:7 face) + the constant stack reserve (0.24 x cw) */
+  --pile-ratio: 1.64;
+
+  --board-w: calc(min(100vw, var(--shell-max)) - 2 * var(--pad-x) - 2 * var(--board-pad));
+  --cw-w: calc((var(--board-w) - (var(--cols) - 1) * var(--gap-x)) / var(--cols));
+
+  --board-h: calc(
+    100dvh - var(--safe-top) - var(--safe-bot) - var(--header-h) - var(--holds-h) -
+      var(--handbar-h) - 2 * var(--board-pad)
+  );
+  --cw-h: calc((var(--board-h) - (var(--rows) - 1) * var(--gap-y)) / var(--rows) / var(--pile-ratio));
+
+  --cw: 4.5rem; /* fallback if the min() below fails to parse */
+  --cw: min(var(--cw-w), var(--cw-h), 9rem);
+
+  --hold-cw: calc(var(--cw) * 0.6);
+  --stack-step: calc(var(--cw) * 0.04);
+  --stack-taper: calc(var(--cw) * 0.008);
+  --stack-reserve: calc(6 * var(--stack-step));
+  --r-card: clamp(7px, calc(var(--cw) * 0.11), 16px);
+
+  height: 100vh; /* Safari <= 15.3 */
   height: 100dvh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  max-width: 30rem;
+  max-width: var(--shell-max);
   margin: 0 auto;
-  padding: max(0.5rem, env(safe-area-inset-top)) 0.9rem 0;
+  padding: var(--safe-top) var(--pad-x) var(--safe-bot);
 }
 
+/* Board and hold tray are centred as one cluster rather than the board floating
+   in a 1fr row with the tray pinned beneath it — the tray belongs to the play
+   area, and pinning it to the bottom left a void between the two. */
 .main {
   position: relative;
   min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
 }
 
 /* ---------- Header ---------- */
 
 .header {
-  padding-bottom: 0.85rem;
-  border-bottom: var(--w) solid var(--ink);
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0.6rem;
 }
 
 .header-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
 .header-title {
   margin: 0;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  color: var(--ink-2);
 }
 
 .header-date {
-  color: var(--soft);
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
 }
 
 .header-tools {
@@ -110,22 +254,37 @@ button {
 }
 
 .icon-btn {
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.3rem;
+  height: 2.3rem;
   display: grid;
   place-items: center;
   padding: 0;
-  border: var(--w) solid var(--ink);
-  background: transparent;
-  color: var(--ink);
-  font-size: 0.8rem;
-  font-weight: 800;
-  line-height: 1;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-chip);
+  background: var(--surface-sunk);
+  color: var(--ink-2);
+  transition: background-color var(--t-fast) linear, color var(--t-fast) linear,
+    border-color var(--t-fast) linear, transform var(--t-fast) var(--ease);
+}
+
+.icon-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.icon-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
 }
 
 .icon-btn:focus-visible {
-  outline: var(--w) solid var(--ink);
-  outline-offset: 3px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .header-stats {
@@ -133,220 +292,416 @@ button {
   align-items: baseline;
   justify-content: space-between;
   gap: 0.6rem;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
 }
 
 .score {
-  font-size: clamp(2.4rem, 12vw, 3.2rem);
+  font-size: clamp(2.3rem, 12vw, 3rem);
   font-weight: 800;
-  line-height: 0.85;
+  line-height: 0.9;
   letter-spacing: -0.05em;
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  transform-origin: 0% 100%;
+  transition: transform var(--t-lift) var(--ease-spring);
+}
+
+/* Swells only while the count-up is actually running. */
+.score--live {
+  transform: scale(1.07);
 }
 
 .header-meta {
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--soft);
+  color: var(--ink-2);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Board: 4 columns x 2 rows ---------- */
+/* ---------- Board ---------- */
 
+/* A sunken tray sized to its cards and centred in whatever room is left. When
+   the board is width-bound — which it is on any tall phone — the leftover
+   height would otherwise read as dead space; a tray gives it an edge. */
 .board {
-  height: 100%;
+  flex: none;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-content: space-evenly;
-  column-gap: 0.5rem;
+  grid-template-columns: repeat(var(--cols), var(--cw));
+  justify-content: center;
+  align-content: center;
+  column-gap: var(--gap-x);
+  row-gap: var(--gap-y);
+  padding: var(--board-pad);
+  border-radius: var(--r-panel);
+  background: var(--surface-sunk);
+  box-shadow: var(--sh-panel);
 }
 
-/* A pile is its face card over one rule per buried card, plus a slim hold
-   button beneath. Sizing is driven by column width — the scarce axis on a
-   4-wide portrait board — with height following from the card's aspect ratio. */
 .pile {
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 5px;
+  position: relative; /* containing block for the hold chip */
+  --lift: 0px;
+  width: var(--cw);
 }
 
 .pile-select {
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 7px;
+  display: block;
+  width: 100%;
   padding: 0;
   border: 0;
   background: none;
+  border-radius: var(--r-card);
 }
 
 .pile-select:disabled {
   cursor: default;
-  opacity: 0.26;
+}
+
+.pile-select:disabled .card {
+  opacity: 0.34;
 }
 
 .pile-select:focus-visible {
-  outline: var(--w) solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
 
-.pile-hold {
-  border: 1.5px solid var(--ink);
-  background: transparent;
-  color: var(--ink);
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 3px 0;
+/* The reserve is a constant six steps whatever the real depth, so a pile of
+   seven and a pile of one occupy identical boxes and the board never reflows
+   as it drains. */
+.pile-stack {
+  /* Blockified deliberately: it is a <span>, and as an inline box the reserve
+     padding would add no height and the backs would inherit a containing block
+     built from its line fragments rather than its width. */
+  display: block;
+  position: relative;
+  width: 100%;
+  padding-bottom: var(--stack-reserve);
+  perspective: 700px;
 }
 
+/* A zero-height frame: the backs size off its width and hang downward, so
+   however many there are they contribute nothing to layout. */
+.pile-backs {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 0;
+  z-index: 1;
+}
+
+.pile-backs i {
+  position: absolute;
+  left: calc(var(--i) * var(--stack-taper));
+  right: calc(var(--i) * var(--stack-taper));
+  top: calc((var(--i) + 1) * var(--stack-step));
+  aspect-ratio: 5 / 7;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+  background-color: var(--card-back);
+  background-image: repeating-linear-gradient(
+      45deg,
+      var(--card-back-line) 0 1px,
+      transparent 1px 6px
+    ),
+    repeating-linear-gradient(-45deg, var(--card-back-line) 0 1px, transparent 1px 6px);
+  box-shadow: 0 1px 1px rgba(30, 27, 24, 0.06);
+}
+
+.pile-stack > .card {
+  position: relative;
+  z-index: 2;
+  transform: translateY(var(--lift));
+  transition: transform var(--t-lift) var(--ease-spring),
+    box-shadow var(--t-lift) var(--ease), border-color var(--t-fast) linear;
+}
+
+.pile--selected {
+  --lift: calc(var(--cw) * -0.14);
+}
+
+.pile-select:active .card {
+  transform: translateY(var(--lift)) scale(0.975);
+  transition-duration: var(--t-fast);
+}
+
+.pile--spent .pile-stack > .card {
+  animation: none;
+}
+
+/* ---------- Hold chip ---------- */
+
+.pile-hold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  transform: translate(38%, -34%) translateY(var(--lift));
+  width: calc(var(--cw) * 0.34);
+  height: calc(var(--cw) * 0.34);
+  min-width: 22px;
+  min-height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-chip);
+  background: var(--surface-raise);
+  color: var(--ink-2);
+  box-shadow: var(--sh-card);
+  transition: transform var(--t-lift) var(--ease-spring),
+    background-color var(--t-fast) linear, color var(--t-fast) linear,
+    border-color var(--t-fast) linear;
+}
+
+.pile-hold svg {
+  width: 58%;
+  height: 58%;
+}
+
+/* Grows the tap target to ~44px without growing the chip. The chip sits mostly
+   outside the card, so little of the expanded target overlaps it. */
+.pile-hold::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+  border-radius: inherit;
+}
+
+/* Not merely dimmed: a disabled chip that kept its expanded hit box would
+   swallow taps aimed at the card's top-right corner. */
 .pile-hold:disabled {
-  border-color: var(--soft);
-  color: var(--soft);
-  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pile-hold:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.pile-hold:active {
+  transform: translate(38%, -34%) translateY(var(--lift)) scale(0.88);
 }
 
 .pile-hold:focus-visible {
-  outline: var(--w) solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.pile--spent {
-  visibility: hidden;
-}
+/* ---------- Card ---------- */
 
 .card {
+  position: relative;
+  display: block;
+  width: 100%;
   aspect-ratio: 5 / 7;
-  border: var(--w) solid var(--ink);
-  background: var(--paper);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: var(--sh-card);
+  overflow: hidden;
+  font-size: 1rem;
+  animation: card-in 340ms var(--ease-spring) both;
+}
+
+/* One font-size hook per context; everything inside the card is in em. */
+.pile-stack > .card {
+  font-size: calc(var(--cw) * 0.235);
+}
+
+.hold-slot .card,
+.hold-slot-empty {
+  font-size: calc(var(--hold-cw) * 0.235);
+}
+
+.card-index {
+  position: absolute;
+  top: 0.3em;
+  left: 0.34em;
   display: grid;
-  place-content: center;
   justify-items: center;
-  gap: 1px;
-  animation: card-in 0.18s steps(3, end);
+  gap: 0.04em;
+  line-height: 0.9;
 }
 
-.card--ghost {
-  border-style: dashed;
-}
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Selection reads as line weight, not colour, so the suit ink stays visible
-   and a flush is still readable while the hand is being built. */
-.pile--selected .card {
-  border-width: var(--w-bold);
-  transform: translateY(-8px);
-}
-
-.card-rank {
-  font-size: clamp(1.15rem, 5.5vw, 1.7rem);
+.card-index-rank {
+  font-size: 0.92em;
   font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.045em;
-  color: var(--ink);
+  letter-spacing: -0.05em;
+  color: var(--card-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-.card-suit {
-  font-size: clamp(0.7rem, 3vw, 0.95rem);
-  line-height: 1;
+.card-index-pip {
+  width: 0.68em;
+  height: 0.68em;
+  display: block;
 }
 
-.card--suit-s .card-suit {
+.card-pip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.85em;
+  height: 1.85em;
+  /* Nudged down-right off the index so the two read as separate marks. */
+  transform: translate(-42%, -46%);
+}
+
+.card--suit-s {
   color: var(--suit-s);
 }
 
-.card--suit-h .card-suit {
+.card--suit-h {
   color: var(--suit-h);
 }
 
-.card--suit-d .card-suit {
+.card--suit-d {
   color: var(--suit-d);
 }
 
-.card--suit-c .card-suit {
+.card--suit-c {
   color: var(--suit-c);
 }
 
-.card--wild .card-rank {
-  font-size: clamp(1rem, 4.5vw, 1.4rem);
+.card--wild {
+  color: var(--accent);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent-soft) 75%, var(--card)),
+    var(--card) 64%
+  );
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--hairline-strong));
 }
 
-.card--wild .card-suit {
-  font-size: 0.42rem;
+.card--wild .card-pip {
+  width: 1.65em;
+  height: 1.65em;
+  transform: translate(-50%, -56%);
+}
+
+.card--wild .card-index-pip {
+  width: 0.78em;
+  height: 0.78em;
+}
+
+.card-wordmark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.42em;
+  text-align: center;
+  font-size: 0.36em;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink);
+  color: var(--accent);
 }
 
-/* Gapped wider than the rules are thick so a full pile reads as six tallies
-   rather than one hatched block — countability is what replaced the number. */
-.stack {
-  height: 38px;
+.card--ghost {
+  border: 1.5px dashed var(--ink-3);
+  background: none;
+  box-shadow: none;
+  opacity: 0.45;
+  animation: none;
+}
+
+/* A cleared pile should recede, not compete. The dashed outline is a "put
+   something here" affordance and belongs to the empty hold slots; on the board
+   four of them shout louder than the live cards, so a spent pile becomes a soft
+   recess instead. It keeps the grid's shape either way. */
+.pile--spent .card--ghost {
+  border: 0;
+  background: color-mix(in srgb, var(--ink-3) 13%, transparent);
+  opacity: 0.5;
+}
+
+/* Selection: a ring and real elevation, not a heavier outline — border weight
+   would shift the card's inner geometry and reflow the pips. */
+.pile--selected .card,
+.hold-slot--selected .card {
+  border-color: var(--accent);
+  box-shadow: var(--sh-lift), 0 0 0 3px var(--accent-soft), inset 0 0 0 1px var(--accent);
+}
+
+/* ---------- Hold tray ---------- */
+
+.hold-tray {
+  flex: none;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--r-panel);
+  background: var(--surface-sunk);
+  box-shadow: var(--sh-panel);
 }
 
-.stack i {
-  display: block;
-  height: 3px;
-  background: var(--ink);
+.hold-tray-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
-
-/* ---------- Hold slots ---------- */
 
 .hold-slots {
   display: flex;
-  justify-content: center;
-  gap: 0.9rem;
-  padding: 0.6rem 0 0;
+  gap: 0.6rem;
 }
 
 .hold-slot,
 .hold-slot-empty {
-  width: 3.2rem;
+  width: var(--hold-cw);
 }
 
 .hold-slot {
   padding: 0;
   border: 0;
   background: none;
+  border-radius: var(--r-card);
 }
 
-.hold-slot:focus-visible {
-  outline: var(--w) solid var(--ink);
-  outline-offset: 4px;
+.hold-slot .card {
+  transition: transform var(--t-lift) var(--ease-spring), box-shadow var(--t-lift) var(--ease);
+  animation: slot-pop 300ms var(--ease-spring) both;
 }
 
 .hold-slot--selected .card {
-  border-width: var(--w-bold);
-  transform: translateY(-6px);
+  transform: translateY(calc(var(--hold-cw) * -0.14));
 }
 
 .hold-slot:disabled {
-  opacity: 0.26;
   cursor: default;
+}
+
+.hold-slot:disabled .card {
+  opacity: 0.34;
+}
+
+.hold-slot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 
 /* ---------- Hand bar ---------- */
 
 .handbar {
-  border-top: var(--w) solid var(--ink);
-  padding: 0.85rem 0 calc(env(safe-area-inset-bottom) + 1rem);
+  min-height: 0;
+  overflow: hidden;
+  margin-top: 0.6rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border-radius: var(--r-panel);
+  background: var(--surface-raise);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--sh-panel);
   display: grid;
-  gap: 0.8rem;
+  gap: 0.7rem;
 }
 
 .readout {
@@ -354,7 +709,7 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   gap: 0.75rem;
-  min-height: 3rem;
+  min-height: 2.9rem;
 }
 
 .readout-hand {
@@ -367,27 +722,34 @@ button {
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.035em;
-  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .readout-name--idle {
-  color: var(--soft);
+  color: var(--ink-3);
 }
 
+/* `pre` is load-bearing: the idle note is a single space, and without it the
+   line collapses and the bar jumps height every other turn. */
 .readout-note {
   display: block;
   margin-top: 0.3rem;
   min-height: 0.8rem;
-  font-size: 0.62rem;
+  font-size: 0.61rem;
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--soft);
+  color: var(--ink-2);
   white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .readout-value {
   text-align: right;
+  flex: none;
 }
 
 .readout-pts {
@@ -396,33 +758,35 @@ button {
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: -0.05em;
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 .readout-pts--idle {
-  color: var(--soft);
+  color: var(--ink-3);
 }
 
 .tiers {
   display: flex;
-  gap: 3px;
-  margin-top: 0.4rem;
+  gap: 4px;
+  margin-top: 0.45rem;
   justify-content: flex-end;
 }
 
 .tiers i {
   display: block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--ink);
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-chip);
+  background: var(--hairline);
+  transition: background-color var(--t-base) var(--ease), transform var(--t-base) var(--ease-spring);
+  transition-delay: calc(var(--i) * 35ms);
 }
 
 .tiers i.on {
-  background: var(--ink);
-}
-
-.tiers--idle i {
-  border-color: var(--soft);
+  background: var(--accent);
+  transform: scale(1.22);
 }
 
 .handbar-actions {
@@ -432,47 +796,68 @@ button {
 }
 
 .btn {
-  min-height: 3.1rem;
+  min-height: 3.25rem;
   padding: 0 1.1rem;
-  border: var(--w) solid var(--ink);
-  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-btn);
+  background: var(--surface-sunk);
   color: var(--ink);
-  font-size: 0.86rem;
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
+  transition: transform var(--t-fast) var(--ease), background-color var(--t-fast) linear,
+    box-shadow var(--t-fast) var(--ease), color var(--t-fast) linear;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.985);
 }
 
 .btn:focus-visible {
-  outline: var(--w) solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-/* The only filled shape in the layout, so the primary action is unmissable. */
+/* The one filled shape on the screen, so the primary action is unmissable. */
 .btn--primary {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--sh-btn);
 }
 
-.btn--primary:disabled {
-  background: transparent;
-  border-color: var(--soft);
-  color: var(--soft);
+.btn--primary:hover {
+  background: var(--accent-hi);
+  border-color: var(--accent-hi);
+}
+
+.btn--primary:disabled,
+.btn--clear:disabled,
+.btn--ghost:disabled {
+  background: var(--surface-sunk);
+  border-color: var(--hairline);
+  color: var(--ink-3);
+  box-shadow: none;
   cursor: default;
+  transform: none;
 }
 
 .btn--clear {
-  width: 3.1rem;
+  width: 3.25rem;
   padding: 0;
-  font-size: 1rem;
-  letter-spacing: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
 }
 
-.btn--clear:disabled,
-.btn--ghost:disabled {
-  border-color: var(--soft);
-  color: var(--soft);
-  cursor: default;
+.btn--clear svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.btn-clear-label {
+  display: none;
 }
 
 /* ---------- Played-hand callout ---------- */
@@ -481,44 +866,32 @@ button {
   position: absolute;
   left: 0;
   right: 0;
-  top: 42%;
+  top: 40%;
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.6rem;
   pointer-events: none;
   z-index: 5;
-  animation: toast-pop 1.05s steps(6, end) forwards;
+  animation: toast-pop 1050ms var(--ease) forwards;
 }
 
 .hand-toast-name,
 .hand-toast-points {
-  background: var(--ink);
-  color: var(--paper);
-  padding: 0.5rem 0.7rem;
-  font-size: 0.86rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 0.55rem 0.95rem;
+  border-radius: var(--r-chip);
+  box-shadow: var(--sh-btn);
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-@keyframes toast-pop {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  20% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  75% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-22px);
-  }
+.hand-toast-points {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Sheets (rules, results) ---------- */
@@ -530,17 +903,40 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  background: rgba(20, 18, 16, 0.45);
+  animation: fade-in var(--t-base) var(--ease) both;
+}
+
+@supports (backdrop-filter: blur(3px)) {
+  .overlay {
+    backdrop-filter: blur(3px);
+  }
 }
 
 .sheet {
+  position: relative;
   width: 100%;
   max-width: 30rem;
   max-height: 92dvh;
   overflow-y: auto;
-  background: var(--paper);
-  border-top: var(--w) solid var(--ink);
-  padding: 1.1rem 0.9rem max(1.1rem, env(safe-area-inset-bottom));
+  background: var(--surface-raise);
+  border-radius: var(--r-panel) var(--r-panel) 0 0;
+  box-shadow: var(--sh-sheet);
+  padding: 1.5rem 1.15rem max(1.15rem, env(safe-area-inset-bottom));
+  animation: sheet-up var(--t-sheet) var(--ease) both;
+}
+
+/* Grab handle — signals "this is a sheet" without any JS to back it up. */
+.sheet::before {
+  content: '';
+  position: absolute;
+  top: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2.25rem;
+  height: 4px;
+  border-radius: var(--r-chip);
+  background: var(--hairline);
 }
 
 .sheet-eyebrow {
@@ -549,7 +945,7 @@ button {
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--soft);
+  color: var(--accent);
 }
 
 .sheet-actions {
@@ -557,14 +953,23 @@ button {
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   gap: 0.5rem;
-  margin-top: 1.1rem;
+  margin-top: 1.15rem;
 }
 
 .rules {
-  margin: 0.8rem 0 1rem;
-  padding-left: 1.1rem;
+  margin: 0.8rem 0 1.1rem;
+  padding-left: 1.15rem;
   font-size: 0.875rem;
   line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.rules li::marker {
+  color: var(--accent);
+}
+
+.rules strong {
+  color: var(--ink);
 }
 
 .rules li + li {
@@ -578,16 +983,15 @@ button {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .ladder-row {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid var(--soft);
+  padding: 0.32rem 0;
+  border-bottom: 1px solid var(--hairline);
 }
 
 .ladder dt,
@@ -597,37 +1001,45 @@ button {
 
 .ladder dd {
   font-variant-numeric: tabular-nums;
-  color: var(--soft);
+  color: var(--ink-3);
+}
+
+/* The two rungs worth chasing get the accent, so the ladder has a peak. */
+.ladder-row:nth-child(-n + 2) dt,
+.ladder-row:nth-child(-n + 2) dd {
+  color: var(--accent);
 }
 
 /* ---------- Results ---------- */
 
 .results-score {
-  margin: 0.3rem 0 0;
-  font-size: 3.4rem;
+  margin: 0.35rem 0 0;
+  font-size: clamp(3.2rem, 16vw, 4rem);
   font-weight: 800;
   line-height: 0.85;
   letter-spacing: -0.05em;
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  animation: count-in 420ms var(--ease-spring) both;
 }
 
 .results-best {
-  margin: 0.5rem 0 0;
+  margin: 0.55rem 0 0;
   font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--soft);
+  color: var(--ink-2);
 }
 
 .results-list {
   list-style: none;
-  margin: 1rem 0 0;
+  margin: 1.1rem 0 0;
   padding: 0;
   font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .results-row {
@@ -635,8 +1047,12 @@ button {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.35rem 0;
-  border-bottom: 1px solid var(--soft);
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--r-btn);
+}
+
+.results-row:nth-child(odd) {
+  background: var(--surface-sunk);
 }
 
 .results-tier {
@@ -648,66 +1064,348 @@ button {
   display: block;
   width: 8px;
   height: 8px;
-  border: 1.5px solid var(--ink);
+  border-radius: var(--r-chip);
+  background: var(--hairline);
 }
 
-.results-tier i.on {
-  background: var(--ink);
+/* Filled cells take the tier's own colour from the share-text ramp. */
+.results-row[data-tier='0'] .results-tier i.on {
+  background: var(--tier-0);
+}
+
+.results-row[data-tier='1'] .results-tier i.on {
+  background: var(--tier-1);
+}
+
+.results-row[data-tier='2'] .results-tier i.on {
+  background: var(--tier-2);
+}
+
+.results-row[data-tier='3'] .results-tier i.on {
+  background: var(--tier-3);
+}
+
+.results-row[data-tier='4'] .results-tier i.on {
+  background: var(--tier-4);
 }
 
 .results-points {
   font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
 }
 
-/* ---------- Landscape / wide ---------- */
+/* ---------- Motion ---------- */
 
-@media (orientation: landscape) and (max-height: 34rem) {
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4%) rotateX(-42deg) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slot-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes toast-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+  11% {
+    opacity: 1;
+    transform: translateY(0) scale(1.04);
+  }
+  18% {
+    transform: translateY(0) scale(1);
+  }
+  74% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.98);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(102%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes count-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The card entrance rotates about its bottom edge, so it reads as the next card
+   flipping up off the pile rather than fading in. */
+.pile-stack > .card {
+  transform-origin: 50% 100%;
+}
+
+/* ---------- Landscape phones: one row of eight ---------- */
+
+@media (orientation: landscape) and (max-height: 34rem) and (max-width: 899px) {
   .app {
-    max-width: 46rem;
+    --shell-max: 52rem;
+    --cols: 8;
+    --rows: 1;
+    --gap-x: 0.5rem;
+    --pad-x: 0.9rem;
+    --header-h: 3.2rem;
+    --holds-h: 4rem;
+    --handbar-h: 5.75rem;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .header-stats {
+    margin-top: 0;
+    align-items: center;
+    gap: 1rem;
   }
 
   .score {
-    font-size: 1.8rem;
+    font-size: 1.9rem;
   }
 
-  /* Portrait sizes cards off column width because columns are scarce there.
-     In landscape height is scarce instead, so the *pile* becomes the
-     height-driven element and the card and rules both take its full width —
-     sizing the card directly would let the rules span the whole column while
-     the card sat narrower, and the two would stop lining up. */
-  .board {
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    align-content: stretch;
+  .handbar {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.4rem;
+    padding: 0.55rem 0.75rem;
   }
 
-  .pile {
-    height: 100%;
-    width: auto;
-    aspect-ratio: 5 / 8.6;
-    justify-self: center;
-    align-content: start;
-    gap: 4px;
+  .readout {
+    min-height: 0;
   }
 
-  .card {
-    width: 100%;
+  .handbar-actions {
+    grid-template-columns: auto auto;
   }
 
-  .stack {
-    height: 18px;
-    gap: 2px;
+  .btn {
+    min-height: 2.75rem;
   }
 
-  .stack i {
-    height: 2px;
+  .btn--clear {
+    width: 2.75rem;
+  }
+
+  .hold-tray {
+    padding: 0.35rem 0.8rem;
   }
 }
+
+/* ---------- Desktop: HUD rail beside the table ---------- */
+
+@media (min-width: 900px) and (min-height: 600px) {
+  .app {
+    --pad-x: 2.5rem;
+    --board-pad: 1.4rem;
+    --gap-x: 0.9rem;
+    --gap-y: 1.1rem;
+    --holds-h: 7rem;
+    --rail-w: 21rem;
+    --board-max: 44rem;
+    --hold-cw: calc(var(--cw) * 0.46);
+
+    max-width: none;
+    padding: 2rem var(--pad-x) 2.25rem;
+    grid-template-columns: var(--rail-w) minmax(0, var(--board-max));
+    grid-template-rows: auto minmax(0, 1fr);
+    justify-content: center;
+    column-gap: 3.5rem;
+
+    /* The rail's height is irrelevant to the board column, so the board gets
+       everything but the app padding and the hold tray. */
+    --board-w: calc(var(--board-max) - 2 * var(--board-pad));
+    --board-h: calc(100dvh - 4.25rem - var(--holds-h) - 2 * var(--board-pad));
+  }
+
+  .header {
+    grid-column: 1;
+    grid-row: 1;
+    padding-bottom: 0;
+    overflow: visible;
+  }
+
+  .header-row {
+    display: block;
+  }
+
+  .header-title {
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+  }
+
+  .header-date {
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+  }
+
+  .header-tools {
+    margin-top: 1rem;
+  }
+
+  .header-stats {
+    display: block;
+    margin-top: 1.75rem;
+  }
+
+  .score {
+    display: block;
+    font-size: clamp(4rem, 5vw, 5.5rem);
+  }
+
+  .header-meta {
+    display: block;
+    margin-top: 0.6rem;
+    text-align: left;
+  }
+
+  .main {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    align-self: center;
+    min-height: 0;
+  }
+
+  .handbar {
+    grid-column: 1;
+    grid-row: 2;
+    /* Stretched across the rest of the rail rather than pinned to the bottom:
+       the readout then sits just under the score (where you look after picking
+       cards) and only the actions anchor to the bottom edge, instead of both
+       dropping down and leaving a void under the score. */
+    align-self: stretch;
+    grid-template-rows: auto 1fr;
+    margin-top: 0;
+    padding: 1.75rem 0 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    gap: 1rem;
+  }
+
+  .btn-clear-label {
+    display: inline;
+  }
+
+  .readout {
+    min-height: 3.5rem;
+  }
+
+  .readout-name {
+    font-size: 1.6rem;
+  }
+
+  .readout-pts {
+    font-size: 2.4rem;
+  }
+
+  .handbar-actions {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    align-self: end;
+  }
+
+  .btn {
+    min-height: 3.5rem;
+  }
+
+  .btn--clear {
+    width: 100%;
+    min-height: 2.75rem;
+    grid-auto-flow: column;
+    /* Content-sized columns, centred as a group — equal-share columns would
+       push the glyph and the label to opposite halves of a full-width button. */
+    grid-auto-columns: max-content;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  /* A centred modal card rather than a bottom sheet. */
+  .overlay {
+    align-items: center;
+  }
+
+  .sheet {
+    max-width: 34rem;
+    border-radius: var(--r-panel);
+    animation-name: sheet-in;
+  }
+
+  .sheet::before {
+    display: none;
+  }
+
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* ---------- Reduced motion ----------
+   Zeroing the durations rather than `animation: none` keeps `both`/`forwards`
+   fill modes applying, so animated elements still land on their end state. */
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

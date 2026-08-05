@@ -34,7 +34,9 @@ export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
 
         <ol className="results-list">
           {hands.map((hand, i) => (
-            <li key={i} className="results-row">
+            // The tier drives a colour ramp that matches the blocks in the share
+            // text, so the score card and the pasted grid read as one artefact.
+            <li key={i} className="results-row" data-tier={CATEGORY_TIER[hand.category]}>
               <span className="results-tier" aria-hidden="true">
                 {Array.from({ length: TIER_COUNT }, (_, slot) => (
                   <i key={slot} className={slot <= CATEGORY_TIER[hand.category] ? 'on' : undefined} />

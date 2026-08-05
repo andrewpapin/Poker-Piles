@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { evaluateHand } from '../game/evaluator';
 import {
   CATEGORY_LABELS,
@@ -17,12 +18,17 @@ type Props = {
   onSubmit: () => void;
 };
 
-/** Hand strength as countable cells — no second colour in a two-colour design. */
+/** Hand strength as a five-step meter — the same vocabulary the results sheet uses. */
 function Tiers({ tier }: { tier: number | null }) {
   return (
     <span className={`tiers${tier === null ? ' tiers--idle' : ''}`} aria-hidden="true">
       {Array.from({ length: TIER_COUNT }, (_, i) => (
-        <i key={i} className={tier !== null && i <= tier ? 'on' : undefined} />
+        <i
+          key={i}
+          className={tier !== null && i <= tier ? 'on' : undefined}
+          // Staggers the fill so the meter fills left-to-right rather than at once.
+          style={{ '--i': i } as CSSProperties}
+        />
       ))}
     </span>
   );
@@ -75,7 +81,20 @@ export function HandBar({ cards, livePiles, heldCount, handsPlayed, onClear, onS
           disabled={cards.length === 0}
           aria-label="Clear selection"
         >
-          ✕
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+          </svg>
+          {/* Shown only on desktop, where the button goes full-width in the rail
+              and an unlabelled glyph in a wide bar reads as a mystery control. */}
+          <span className="btn-clear-label">Clear</span>
         </button>
         <button
           type="button"
