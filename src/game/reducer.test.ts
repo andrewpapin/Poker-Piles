@@ -130,9 +130,11 @@ describe('holding', () => {
     expect(gameReducer(emptied, { type: 'hold', pile: 0 })).toBe(emptied);
   });
 
-  it('does nothing when that pile is currently selected', () => {
+  it('drops the pile from the hand selection when it was already selected', () => {
     const state = gameReducer(initGame(SEED), { type: 'toggle', pile: 0 });
-    expect(gameReducer(state, { type: 'hold', pile: 0 })).toBe(state);
+    const held = gameReducer(state, { type: 'hold', pile: 0 });
+    expect(held.selected).toEqual([]);
+    expect(held.held[0]).toEqual(topCard(state.piles[0]));
   });
 
   it('toggles a held card into and out of the current selection', () => {

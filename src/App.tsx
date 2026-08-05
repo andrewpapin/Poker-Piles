@@ -100,9 +100,21 @@ export default function App() {
     [armedHoldSlot],
   );
 
-  const handleArmHoldSlot = useCallback((slot: number) => {
-    setArmedHoldSlot((current) => (current === slot ? null : slot));
-  }, []);
+  // Tapping an empty hold slot either banks the most recently selected pile card
+  // there directly — the "select a card, then the slot" order — or, with nothing
+  // selected, arms the slot for the reverse order ("slot, then a card").
+  const handleArmHoldSlot = useCallback(
+    (slot: number) => {
+      const lastPileSelection = [...state.selected].reverse().find((e) => e.origin === 'pile');
+      if (lastPileSelection) {
+        dispatch({ type: 'hold', pile: lastPileSelection.index, slot });
+        setArmedHoldSlot(null);
+        return;
+      }
+      setArmedHoldSlot((current) => (current === slot ? null : slot));
+    },
+    [state.selected],
+  );
 
   const selection = selectedCards(state);
 

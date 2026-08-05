@@ -16,8 +16,9 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
           </li>
           <li>Every pile you draw from flips its next card. Piles you skip stay put.</li>
           <li>
-            Tap an empty <strong>hold</strong> slot, then tap a card to bank it there. Held cards
-            flip the pile beneath them straight away and can join any later hand.
+            Tap an empty <strong>hold</strong> slot, then a card — or a card, then an empty slot —
+            to bank it there. Held cards flip the pile beneath them straight away and can join any
+            later hand.
           </li>
           <li>
             Four <strong>wilds</strong> are shuffled in. A wild becomes whatever rank and suit

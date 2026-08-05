@@ -115,9 +115,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const pile = state.piles[action.pile];
       const card = pile ? topCard(pile) : null;
       if (!card) return state;
-      // The card is about to move; a stale selection pointing at this pile would silently
-      // start referring to whatever card is revealed underneath.
-      if (state.selected.some((e) => e.origin === 'pile' && e.index === action.pile)) return state;
 
       // A specific slot is passed when the player armed it explicitly (tapped
       // the empty slot, then the card); otherwise fall back to the first open one.
@@ -126,9 +123,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const piles = state.piles.map((p, i) => (i === action.pile ? p.slice(0, -1) : p));
       const held = state.held.map((c, i) => (i === slot ? card : c));
+      // The card is about to move; a stale selection pointing at this pile would silently
+      // start referring to whatever card is revealed underneath, so drop it — this is also
+      // how "select a card, then tap an empty hold slot" banks the selected card.
+      const selected = state.selected.some((e) => e.origin === 'pile' && e.index === action.pile)
+        ? state.selected.filter((e) => !(e.origin === 'pile' && e.index === action.pile))
+        : state.selected;
       // Banking a card can only ever fill a slot, never empty every pile *and* every hold slot
       // at once, so this action can never complete the game — status is left untouched.
-      return { ...state, piles, held };
+      return { ...state, piles, held, selected };
     }
 
     case 'clear':
