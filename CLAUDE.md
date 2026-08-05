@@ -91,7 +91,7 @@ directly to preview the live selection; it reads the evaluator, it does not re-i
 | `HoldSlots.tsx` | The two hold slots — an occupied slot is a selectable card, an empty one is an armable "+" target |
 | `HandBar.tsx` | Live readout of the current selection (category, points, five-step tier meter) and the Clear / Play hand buttons |
 | `HowToPlay.tsx` | The rules sheet: a five-bullet lockup plus the full scoring ladder, rendered from `CATEGORY_POINTS` |
-| `Results.tsx` | The end-of-run sheet: score, per-category counts, per-hand list, the day's average, Play again / Share |
+| `Results.tsx` | The end-of-run *page* — not an overlay: it replaces the play area once the run is over. Score, per-category counts, per-hand list, the day's average, Play again / Share |
 
 `src/net/`:
 
@@ -110,6 +110,11 @@ mutation goes through `dispatch` with the eight `GameAction` variants (`toggle`,
 `hold`, `clear`, `submit`, `giveUp`, `markRecorded`, `newGame`). Every state change is persisted
 to localStorage via `saveGame` in a `useEffect`, so a backgrounded tab silently picks its run
 back up.
+
+`App.tsx` renders one of two screens off `state.status`: the play screen (header, board, hold
+tray, hand bar) or, once the run is `complete`, the results page (header with its score block
+suppressed, then `Results` in the play area's place). The shell — `.app`, its `--cw` derivation
+and the `HowToPlay` overlay — is common to both; only the flexible middle row differs.
 
 `App.tsx` also holds five pieces of purely-presentational state that deliberately do **not**
 live in the reducer, because none of them affect the game: `showHelp`, the scored-hand `toast`,
@@ -225,14 +230,23 @@ governed by one rule: **it is additive and best-effort — the game must be comp
 - **One stylesheet, no framework.** `src/styles.css` is organised into commented sections
   (Shell, Header, Board, Card, Hold tray, Hand bar, Sheets, Results, Motion, then the landscape
   and desktop layouts, then reduced motion). Tokens are CSS custom properties on `:root`, with a
-  designed dark palette under `prefers-color-scheme: dark` — it is not an inversion, card faces
-  go dark too.
+  second palette under `:root[data-theme='dark']`. There are two themes and both are
+  dark-grounded: **Party** (the default, on `:root`, carried by the stored theme value `'light'`)
+  is near-black with saturated neon; **night** (`data-theme='dark'`) is warm and dimmed. Neither
+  is an inversion — card faces go dark in both, and both declare `color-scheme: dark`. The theme
+  is an explicit choice made with the header toggle, stamped onto `<html>` before first paint by
+  the inline script in `index.html` and persisted at `pokerpiles:v2:theme`; the system
+  `prefers-color-scheme` is only consulted for a player who has never toggled. The stored values
+  are still `'light' | 'dark'` because they are load-bearing across `index.html`,
+  `game/storage.ts` and existing saves — read them as "Party" and "night".
 - **The whole game fits one screen at every size, and the page never scrolls**
   (`html, body { overflow: hidden }`). This is guaranteed by `--cw`, the width of one card,
   derived in `.app` as the `min()` of a width-derived and a height-derived value so whichever
   axis is scarce wins. Everything else — card radius, pip size, stack offsets, hold-slot size —
   is computed from `--cw` in `em`/`calc`. If you add or resize chrome, update the `--header-h` /
-  `--holds-h` / `--handbar-h` estimates that feed `--board-h`.
+  `--holds-h` / `--handbar-h` estimates that feed `--board-h`. The results page obeys the same
+  rule the other way round: it takes the play area's row and scrolls only `.results-body`
+  internally, so a long run's hand list never pushes Play again / Share off-screen.
 - **Suits and icons are drawn as inline SVG paths, never typed as Unicode.** `♠♥♦♣` are missing
   from most webfont latin subsets, and several mobile platforms promote `♥`/`♦` to colour emoji.
   Same reasoning for the restart/help/flag glyphs in `Header`. (`SUIT_GLYPHS` still exists in
@@ -240,12 +254,14 @@ governed by one rule: **it is additive and best-effort — the game must be comp
 - **The 5-step tier ramp (`CATEGORY_TIER`, `TIER_COUNT`, `--tier-0..4`) is shared vocabulary**
   between `HandBar`'s live meter and `Results`' per-hand rows, so a hand looks the same colour
   wherever it appears. It exists to convey "how good was that?" without printing a points table.
-- **The accent (indigo) is deliberately outside the four suit hues**, so "selected" can never be
-  misread as a suit.
+- **The accent sits outside the four suit hues** so "selected" is not misread as a suit — cleanly
+  so in the night theme (indigo against white/rose/amber/green), less so in Party, where the
+  accent pink and the heart rose are neighbours. Selection there leans on the ring, the inset
+  stroke and the lift as much as on hue; keep all three if you touch `.pile--selected .card`.
 - Accessibility is partial and known-incomplete: `aria-label`/`aria-pressed` are used
-  throughout, but the two overlays declare `aria-modal` without implementing focus trapping or
-  Escape, and scoring is not announced to assistive tech. See BACKLOG PP-3 through PP-5 before
-  "fixing" these piecemeal.
+  throughout, but the `HowToPlay` overlay declares `aria-modal` without implementing focus
+  trapping or Escape, and scoring is not announced to assistive tech. See BACKLOG PP-3 through
+  PP-5 before "fixing" these piecemeal.
 - Motion respects `prefers-reduced-motion` by zeroing durations rather than removing animations,
   so fill modes still land and elements don't get stranded mid-transition.
 
