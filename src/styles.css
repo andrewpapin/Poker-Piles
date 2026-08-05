@@ -1032,6 +1032,55 @@ button {
   color: var(--ink-2);
 }
 
+.results-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+}
+
+.results-summary-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--r-chip);
+  background: var(--surface-sunk);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.results-summary-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.results-summary-chip[data-tier='0'] .results-summary-count {
+  color: var(--tier-0);
+}
+
+.results-summary-chip[data-tier='1'] .results-summary-count {
+  color: var(--tier-1);
+}
+
+.results-summary-chip[data-tier='2'] .results-summary-count {
+  color: var(--tier-2);
+}
+
+.results-summary-chip[data-tier='3'] .results-summary-count {
+  color: var(--tier-3);
+}
+
+.results-summary-chip[data-tier='4'] .results-summary-count {
+  color: var(--tier-4);
+}
+
+.results-summary-name {
+  color: var(--ink-2);
+}
+
 .results-list {
   list-style: none;
   margin: 1.1rem 0 0;
