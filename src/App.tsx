@@ -86,6 +86,14 @@ export default function App() {
     setShowHelp(false);
   }, []);
 
+  const handleFinishGame = useCallback(() => {
+    if (!window.confirm('Finish the game? All remaining cards will be played automatically, one at a time.')) {
+      return;
+    }
+    setArmedHoldSlot(null);
+    dispatch({ type: 'finishGame' });
+  }, []);
+
   // Tapping a pile either selects it for the hand, or — if a hold slot is armed —
   // banks its top card there instead. Either way the arming is consumed by the tap.
   const handlePileTap = useCallback(
@@ -127,6 +135,8 @@ export default function App() {
         lastHand={state.hands.length > 0 ? state.hands[state.hands.length - 1] : null}
         onNewGame={handleNewGame}
         onHelp={() => setShowHelp(true)}
+        onFinishGame={handleFinishGame}
+        canFinish={state.status === 'playing'}
       />
 
       <main className="main">

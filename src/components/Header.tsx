@@ -9,6 +9,8 @@ type Props = {
   lastHand: HandResult | null;
   onNewGame: () => void;
   onHelp: () => void;
+  onFinishGame: () => void;
+  canFinish: boolean;
 };
 
 /** Animates toward `value` instead of snapping, so a scored hand feels earned. */
@@ -39,7 +41,16 @@ function useCountUp(value: number, duration = 700): number {
   return display;
 }
 
-export function Header({ dateKey, total, handsPlayed, lastHand, onNewGame, onHelp }: Props) {
+export function Header({
+  dateKey,
+  total,
+  handsPlayed,
+  lastHand,
+  onNewGame,
+  onHelp,
+  onFinishGame,
+  canFinish,
+}: Props) {
   const displayTotal = useCountUp(total);
   // True only while the count-up is running, which is exactly when the score
   // should swell — no key, no remount, no extra timer.
@@ -53,6 +64,30 @@ export function Header({ dateKey, total, handsPlayed, lastHand, onNewGame, onHel
           <span className="header-date">{formatPuzzleDate(dateKey)}</span>
         </div>
         <div className="header-tools">
+          {canFinish && (
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={onFinishGame}
+              aria-label="Finish game"
+              title="Play out all remaining cards automatically"
+            >
+              {/* Fast-forward glyph: auto-plays every remaining card, one at a time. */}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M4 6v12l8-6-8-6z" />
+                <path d="M13 6v12l8-6-8-6z" />
+              </svg>
+            </button>
+          )}
           <button type="button" className="icon-btn" onClick={onHelp} aria-label="How to play">
             {/* Drawn rather than typed, for the same reason as the restart arrow. */}
             <svg

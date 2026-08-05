@@ -251,6 +251,38 @@ describe('a full run', () => {
   });
 });
 
+describe('finishGame', () => {
+  it('plays out every remaining card as its own hand and completes the game', () => {
+    const before = initGame(SEED);
+    const after = gameReducer(before, { type: 'finishGame' });
+
+    expect(after.status).toBe('complete');
+    expect(cardsRemaining(after)).toBe(0);
+    expect(after.held).toEqual([null, null]);
+    expect(after.selected).toEqual([]);
+    expect(after.hands).toHaveLength(PILE_COUNT * PILE_SIZE);
+    expect(after.hands.every((h) => h.cardCount === 1)).toBe(true);
+    expect(after.hands.reduce((sum, h) => sum + h.score, 0)).toBe(after.total);
+  });
+
+  it('plays off held cards too, and drops the current selection', () => {
+    let state = gameReducer(initGame(SEED), { type: 'hold', pile: 0 });
+    state = gameReducer(state, { type: 'hold', pile: 1 });
+    state = gameReducer(state, { type: 'toggle', pile: 2 });
+
+    const after = gameReducer(state, { type: 'finishGame' });
+    expect(after.status).toBe('complete');
+    expect(after.held).toEqual([null, null]);
+    expect(after.selected).toEqual([]);
+    expect(after.hands).toHaveLength(PILE_COUNT * PILE_SIZE);
+  });
+
+  it('does nothing once the game is already complete', () => {
+    const state = gameReducer(initGame(SEED), { type: 'finishGame' });
+    expect(gameReducer(state, { type: 'finishGame' })).toBe(state);
+  });
+});
+
 describe('newGame', () => {
   it('redeals the same board for the same day', () => {
     const played = play(initGame(SEED), 0, 1, 2);

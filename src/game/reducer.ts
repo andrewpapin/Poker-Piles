@@ -27,6 +27,7 @@ export type GameAction =
   | { type: 'hold'; pile: number; slot?: number }
   | { type: 'clear' }
   | { type: 'submit' }
+  | { type: 'finishGame' }
   | { type: 'newGame'; dateKey: string };
 
 export function initGame(dateKey: string): GameState {
@@ -157,6 +158,36 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         total: state.total + result.score,
         status: exhausted ? 'complete' : 'playing',
       };
+    }
+
+    case 'finishGame': {
+      if (state.status !== 'playing') return state;
+
+      const piles = state.piles.map((pile) => [...pile]);
+      const held = [...state.held];
+      const hands = [...state.hands];
+      let total = state.total;
+
+      // Held cards are already exposed, so play them off first, then each pile
+      // top to bottom — every remaining card becomes its own single-card hand.
+      for (let slot = 0; slot < held.length; slot++) {
+        const card = held[slot];
+        if (!card) continue;
+        const result = evaluateHand([card]);
+        hands.push(result);
+        total += result.score;
+        held[slot] = null;
+      }
+
+      for (const pile of piles) {
+        while (pile.length > 0) {
+          const result = evaluateHand([pile.pop()!]);
+          hands.push(result);
+          total += result.score;
+        }
+      }
+
+      return { ...state, piles, held, selected: [], hands, total, status: 'complete' };
     }
 
     case 'newGame':
