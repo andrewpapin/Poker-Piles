@@ -25,37 +25,20 @@ describe('buildShareText', () => {
     result('PAIR', 2, 3),
   ];
 
-  it('summarises the run as a block grid', () => {
+  it('summarises the run as name, date, score and a link', () => {
     expect(buildShareText('2026-08-03', 187, hands)).toBe(
-      ['Poker Piles · Aug 3 — 187', '3 hands', '', '🟥🟧🟨'].join('\n'),
+      ['Poker Piles — Aug 3', 'Score: 187 (3 hands)', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
     );
   });
 
-  it('uses one block per hand, coloured by tier', () => {
-    const grid = buildShareText('2026-08-03', 1, [result('HIGH_CARD', 5, 1)]).split('\n')[3];
-    expect(grid).toBe('⬜');
-    const royal = buildShareText('2026-08-03', 200, [result('ROYAL_FLUSH', 5, 200)]).split('\n')[3];
-    expect(royal).toBe('🟪');
-  });
-
-  it('wraps at eight hands so a full run stays short', () => {
-    const run = Array.from({ length: 14 }, () => result('PAIR', 5, 5));
-    const lines = buildShareText('2026-08-03', 70, run).split('\n');
-    // Header, count, blank, then exactly two grid rows — not fourteen.
-    expect(lines).toHaveLength(5);
-    expect(lines[3]).toHaveLength([...'🟨'].length * 8 * 2);
-    expect([...lines[4]].length).toBe([...'🟨'].length * 6);
+  it('ends with a link back to the game', () => {
+    expect(buildShareText('2026-08-03', 187, hands)).toMatch(/https:\/\/andrewpapin\.github\.io\/Poker-Piles\/$/);
   });
 
   it('handles a run with no hands played', () => {
-    expect(buildShareText('2026-08-03', 0, [])).toBe('Poker Piles · Aug 3 — 0');
-  });
-
-  it('uses only emoji with broad device coverage — never the card-back glyph', () => {
-    const every = (
-      ['ROYAL_FLUSH', 'FOUR_OF_A_KIND', 'FLUSH', 'TWO_PAIR', 'HIGH_CARD'] as const
-    ).map((c) => result(c, 5, 1));
-    expect(buildShareText('2026-08-03', 5, every)).not.toMatch(/\u{1F0A0}/u);
+    expect(buildShareText('2026-08-03', 0, [])).toBe(
+      ['Poker Piles — Aug 3', 'Score: 0', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
+    );
   });
 
   it('leaks no ranks, suits or hand names', () => {

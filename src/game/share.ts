@@ -1,16 +1,7 @@
-import { CATEGORY_TIER } from './types';
 import type { HandResult } from './types';
 
-/**
- * One block per hand, coloured by tier. These five are all long-standing
- * emoji with near-universal font coverage — unlike U+1F0A0 PLAYING CARD BACK,
- * which is absent on many devices and used to render as tofu in the one place
- * the text is guaranteed to land on someone else's phone.
- */
-const TIER_BLOCKS = ['⬜', '🟨', '🟧', '🟥', '🟪'] as const;
-
-/** Hands per row: keeps a full ~14-hand run to two rows instead of 14 lines. */
-const BLOCKS_PER_ROW = 8;
+/** Linked back from the share text so a paste doubles as an invite. */
+const GAME_URL = 'https://andrewpapin.github.io/Poker-Piles/';
 
 /** "2026-08-03" -> "Aug 3". Parsed as UTC so it matches the puzzle key exactly. */
 export function formatPuzzleDate(dateKey: string): string {
@@ -20,23 +11,14 @@ export function formatPuzzleDate(dateKey: string): string {
 }
 
 /**
- * A spoiler-free, Wordle-style summary: a block grid of hand tiers and the
- * score. Deliberately never mentions a rank, a suit, or a category name —
- * naming the hands both leaked the shape of the run and made the text far too
- * long to be worth pasting.
+ * A spoiler-free summary: the date, the score, and a link back to the game.
+ * Deliberately never mentions a rank, a suit, or a category name — naming
+ * the hands would leak the shape of the run.
  */
 export function buildShareText(dateKey: string, total: number, hands: HandResult[]): string {
-  const header = [`Poker Piles · ${formatPuzzleDate(dateKey)} — ${total}`];
-  if (hands.length === 0) return header.join('\n');
-
-  header.push(`${hands.length} hand${hands.length === 1 ? '' : 's'}`, '');
-
-  const blocks = hands.map((hand) => TIER_BLOCKS[CATEGORY_TIER[hand.category]]);
-  const rows: string[] = [];
-  for (let i = 0; i < blocks.length; i += BLOCKS_PER_ROW) {
-    rows.push(blocks.slice(i, i + BLOCKS_PER_ROW).join(''));
-  }
-  return [...header, ...rows].join('\n');
+  let scoreLine = `Score: ${total}`;
+  if (hands.length > 0) scoreLine += ` (${hands.length} hand${hands.length === 1 ? '' : 's'})`;
+  return [`Poker Piles — ${formatPuzzleDate(dateKey)}`, scoreLine, '', GAME_URL].join('\n');
 }
 
 export type ShareOutcome = 'shared' | 'copied' | 'failed';
