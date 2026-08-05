@@ -443,14 +443,14 @@ button {
    card) so it holds its corner even while the top card lifts on selection.
    It sits in the stack reserve below the face card — clear of the artwork, in
    the bottom-right corner of the stack — which is why it is kept shorter than
-   `--stack-reserve` (0.24 * --cw). Shown on every pile, including a spent one,
-   where it simply reads "0". */
+   `--stack-reserve` (0.24 * --cw). Shown on every pile as "remaining/PILE_SIZE",
+   including a spent one, where it simply reads "0/7". */
 .pile-count {
   position: absolute;
   bottom: 0;
   right: 0;
   z-index: 3;
-  min-width: 1.5em;
+  min-width: 2.3em;
   padding: 0.05em 0.34em;
   border-radius: var(--r-chip);
   border: 1px solid var(--hairline);
