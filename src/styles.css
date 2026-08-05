@@ -441,22 +441,25 @@ button {
 
 /* Small remaining-count chip, pinned to the pile box itself (not the lifting
    card) so it holds its corner even while the top card lifts on selection.
-   Shown on every pile, including a spent one, where it simply reads "0". */
+   It sits in the stack reserve below the face card — clear of the artwork, in
+   the bottom-right corner of the stack — which is why it is kept shorter than
+   `--stack-reserve` (0.24 * --cw). Shown on every pile, including a spent one,
+   where it simply reads "0". */
 .pile-count {
   position: absolute;
-  top: 0;
+  bottom: 0;
   right: 0;
   z-index: 3;
-  min-width: 1.7em;
-  padding: 0.16em 0.42em;
+  min-width: 1.5em;
+  padding: 0.05em 0.34em;
   border-radius: var(--r-chip);
   border: 1px solid var(--hairline);
   background: var(--surface-sunk);
   box-shadow: var(--sh-card);
   color: var(--ink-2);
-  font-size: calc(var(--cw) * 0.15);
+  font-size: calc(var(--cw) * 0.115);
   font-weight: 800;
-  line-height: 1.3;
+  line-height: 1.25;
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
