@@ -35,18 +35,13 @@ export function HandBar({ cards, livePiles, heldCount, onClear, onSubmit }: Prop
   const noFiveCardHands = livePiles + heldCount < MAX_HAND_SIZE;
 
   let note: string;
-  if (hand) {
-    note =
-      hand.cardCount < MAX_HAND_SIZE
-        ? `${hand.cardCount} of ${MAX_HAND_SIZE} cards`
-        : 'Full hand';
-  } else if (noFiveCardHands) {
+  if (noFiveCardHands) {
     const piles = `${livePiles} pile${livePiles === 1 ? '' : 's'}`;
     const left = heldCount > 0 ? `${piles} + ${heldCount} held left` : `${piles} left`;
     note = `${left} · no straights or flushes`;
   } else {
-    // Nothing selected and nothing to flag: the bar stays quiet rather than
-    // restating the rules every turn.
+    // Nothing to flag: the bar stays quiet rather than counting the selection
+    // back at a player who can already see the cards they picked.
     note = ' ';
   }
 
