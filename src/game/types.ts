@@ -119,6 +119,23 @@ export const RANK_LABELS: Record<Rank, string> = {
   14: 'A',
 };
 
+/** Spelled-out ranks, for the wordmark along the bottom edge of a card face. */
+export const RANK_WORDS: Record<Rank, string> = {
+  2: 'Two',
+  3: 'Three',
+  4: 'Four',
+  5: 'Five',
+  6: 'Six',
+  7: 'Seven',
+  8: 'Eight',
+  9: 'Nine',
+  10: 'Ten',
+  11: 'Jack',
+  12: 'Queen',
+  13: 'King',
+  14: 'Ace',
+};
+
 export const PILE_COUNT = 8;
 export const PILE_SIZE = 7;
 export const MAX_HAND_SIZE = 5;
