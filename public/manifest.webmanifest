@@ -1,0 +1,19 @@
+{
+  "name": "Poker Piles",
+  "short_name": "Poker Piles",
+  "description": "A daily poker puzzle. Build the best hands you can from eight piles of cards.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf7f0",
+  "theme_color": "#fbf7f0",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
