@@ -342,7 +342,7 @@ button {
 }
 
 .pile {
-  position: relative; /* containing block for the hold chip */
+  position: relative; /* containing block for the count chip */
   --lift: 0px;
   width: var(--cw);
 }
@@ -437,6 +437,34 @@ button {
   border-color: var(--accent);
   border-style: dashed;
   box-shadow: var(--sh-card), 0 0 0 3px var(--accent-soft);
+}
+
+/* Small remaining-count chip, pinned to the pile box itself (not the lifting
+   card) so it holds its corner even while the top card lifts on selection.
+   Shown on every pile, including a spent one, where it simply reads "0". */
+.pile-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  min-width: 1.7em;
+  padding: 0.16em 0.42em;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--hairline);
+  background: var(--surface-sunk);
+  box-shadow: var(--sh-card);
+  color: var(--ink-2);
+  font-size: calc(var(--cw) * 0.15);
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  pointer-events: none;
+}
+
+.pile--spent .pile-count {
+  opacity: 0.5;
 }
 
 /* ---------- Card ---------- */

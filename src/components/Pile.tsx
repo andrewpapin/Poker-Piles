@@ -41,6 +41,7 @@ export function Pile({ pile, index, selected, disabled, holdArmed, onToggle }: P
         <span className="pile-stack">
           <span className="card card--ghost" />
         </span>
+        <span className="pile-count">0</span>
       </div>
     );
   }
@@ -67,6 +68,7 @@ export function Pile({ pile, index, selected, disabled, holdArmed, onToggle }: P
           <CardFace key={card.id} card={card} />
         </span>
       </button>
+      <span className="pile-count" aria-hidden="true">{pile.length}</span>
     </div>
   );
 }
