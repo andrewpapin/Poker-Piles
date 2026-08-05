@@ -523,8 +523,9 @@ button {
   left: 50%;
   width: 1.85em;
   height: 1.85em;
-  /* Nudged down-right off the index so the two read as separate marks. */
-  transform: translate(-42%, -46%);
+  /* Centred horizontally and lifted a touch, so it sits between the index and
+     the rank printed along the bottom edge rather than crowding either. */
+  transform: translate(-50%, -56%);
 }
 
 .card--suit-s {
@@ -556,7 +557,6 @@ button {
 .card--wild .card-pip {
   width: 1.65em;
   height: 1.65em;
-  transform: translate(-50%, -56%);
 }
 
 .card--wild .card-index-pip {
@@ -575,6 +575,20 @@ button {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
+  line-height: 1;
+}
+
+/* The rank repeated along the bottom edge. It sets in the card's own ink at
+   roughly index size rather than the wild's tracked-out small caps — it is a
+   value, not a label. The trailing letter-space is negative, so centring the
+   text box would push the glyphs right of centre; the padding gives that back. */
+.card-wordmark--rank {
+  bottom: 0.3em;
+  font-size: 0.62em;
+  letter-spacing: -0.05em;
+  padding-right: 0.05em;
+  color: var(--card-ink);
+  font-variant-numeric: tabular-nums;
 }
 
 .card--ghost {

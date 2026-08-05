@@ -40,9 +40,12 @@ function Star({ className }: { className: string }) {
 }
 
 /**
- * A card is drawn like a real one: a rank-over-suit index in the top-left and a
- * large centred pip. Everything inside is sized in `em` off the font-size the
- * parent sets on `.card`, so the same component serves a board pile and a
+ * A card carries its value twice — a bare rank index in the top-left and the
+ * same rank repeated along the bottom edge, where the wild card prints its
+ * wordmark — around one large centred pip. The index is rank-only: the suit is
+ * already unmistakable from the centre pip, and a second small pip under the
+ * number only crowded it. Everything inside is sized in `em` off the font-size
+ * the parent sets on `.card`, so the same component serves a board pile and a
  * hold slot without a size prop.
  */
 export function CardFace({ card }: { card: Card }) {
@@ -64,9 +67,11 @@ export function CardFace({ card }: { card: Card }) {
     <span className={`card card--suit-${card.suit.toLowerCase()}`}>
       <span className="card-index" aria-hidden="true">
         <span className="card-index-rank">{RANK_LABELS[card.rank]}</span>
-        <Pip suit={card.suit} className="card-index-pip" />
       </span>
       <Pip suit={card.suit} className="card-pip" />
+      <span className="card-wordmark card-wordmark--rank" aria-hidden="true">
+        {RANK_LABELS[card.rank]}
+      </span>
     </span>
   );
 }
