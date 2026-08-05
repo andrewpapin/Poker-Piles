@@ -1,12 +1,6 @@
 import type { CSSProperties } from 'react';
 import { evaluateHand } from '../game/evaluator';
-import {
-  CATEGORY_LABELS,
-  CATEGORY_POINTS,
-  CATEGORY_TIER,
-  MAX_HAND_SIZE,
-  TIER_COUNT,
-} from '../game/types';
+import { CATEGORY_LABELS, CATEGORY_TIER, MAX_HAND_SIZE, TIER_COUNT } from '../game/types';
 import type { Card } from '../game/types';
 
 type Props = {
@@ -36,19 +30,21 @@ function Tiers({ tier }: { tier: number | null }) {
 
 export function HandBar({ cards, livePiles, heldCount, handsPlayed, onClear, onSubmit }: Props) {
   const hand = cards.length > 0 ? evaluateHand(cards) : null;
-  // Once piles and held cards combined can't reach 5, a short hand is forced rather than a mistake.
-  const forcedPartial = livePiles + heldCount < MAX_HAND_SIZE;
+  // Once piles and held cards combined can't reach 5, straights and flushes are
+  // off the table for the rest of the run — worth saying, since nothing on the
+  // board shows it.
+  const noFiveCardHands = livePiles + heldCount < MAX_HAND_SIZE;
 
   let note: string;
   if (hand) {
-    note = hand.partial
-      ? `${hand.cardCount} of ${MAX_HAND_SIZE} · halved from ${CATEGORY_POINTS[hand.category]}`
-      : 'Full hand';
-  } else if (forcedPartial) {
     note =
-      heldCount > 0
-        ? `${livePiles} pile${livePiles === 1 ? '' : 's'} + ${heldCount} held left · short hands halve`
-        : `${livePiles} pile${livePiles === 1 ? '' : 's'} left · short hands halve`;
+      hand.cardCount < MAX_HAND_SIZE
+        ? `${hand.cardCount} of ${MAX_HAND_SIZE} cards`
+        : 'Full hand';
+  } else if (noFiveCardHands) {
+    const piles = `${livePiles} pile${livePiles === 1 ? '' : 's'}`;
+    const left = heldCount > 0 ? `${piles} + ${heldCount} held left` : `${piles} left`;
+    note = `${left} · no straights or flushes`;
   } else if (handsPlayed === 0) {
     note = 'One card per pile';
   } else {

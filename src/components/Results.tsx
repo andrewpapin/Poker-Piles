@@ -11,11 +11,12 @@ type Props = {
   dateKey: string;
   total: number;
   hands: HandResult[];
+  gaveUp: boolean;
   stats: DailyStats | null;
   onPlayAgain: () => void;
 };
 
-export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
+export function Results({ dateKey, total, hands, gaveUp, stats, onPlayAgain }: Props) {
   const [shareLabel, setShareLabel] = useState('Share');
 
   async function handleShare() {
@@ -33,7 +34,7 @@ export function Results({ dateKey, total, hands, stats, onPlayAgain }: Props) {
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Run complete">
       <div className="sheet">
-        <p className="sheet-eyebrow">Deck cleared</p>
+        <p className="sheet-eyebrow">{gaveUp ? 'Gave up' : 'Deck cleared'}</p>
         <p className="results-score">{total}</p>
         <p className="results-best">
           {hands.length} hand{hands.length === 1 ? '' : 's'}

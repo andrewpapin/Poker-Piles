@@ -7,9 +7,15 @@ import type { GameState, SelectionEntry } from './reducer';
  * Every access is guarded: Safari private mode throws on localStorage writes.
  */
 
-const STATS_KEY = 'pokerpiles:v1:stats';
-const GAME_KEY = 'pokerpiles:v1:game';
-const HELP_KEY = 'pokerpiles:v1:seenHelp';
+/**
+ * Bumped to v2 with the scoring change: a run or a best-score saved under the
+ * old size-scaled rules is not comparable to one scored under these, so the old
+ * keys are abandoned rather than migrated. The help key rides along so returning
+ * players are shown the changed rules once.
+ */
+const STATS_KEY = 'pokerpiles:v2:stats';
+const GAME_KEY = 'pokerpiles:v2:game';
+const HELP_KEY = 'pokerpiles:v2:seenHelp';
 
 export type DailyStats = {
   dateKey: string;
@@ -114,5 +120,5 @@ export function loadGame(dateKey: string): GameState | null {
   const selected: SelectionEntry[] = stored.selected.map((e) =>
     typeof e === 'number' ? { origin: 'pile', index: e } : (e as SelectionEntry),
   );
-  return { ...stored, held, selected };
+  return { ...stored, held, selected, gaveUp: stored.gaveUp ?? false };
 }

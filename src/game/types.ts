@@ -24,15 +24,20 @@ export type HandCategory =
 
 export type HandResult = {
   category: HandCategory;
-  /** Score before any partial-hand penalty. */
-  basePoints: number;
-  /** Final score: basePoints, halved and rounded for hands of fewer than 5 cards. */
+  /** Points for the category. Hand size never scales this — see CATEGORY_POINTS. */
   score: number;
   cardCount: number;
-  /** True when the hand had fewer than 5 cards and took the 50% penalty. */
-  partial: boolean;
 };
 
+/**
+ * A hand is worth its category, full stop — submitting three spare cards
+ * alongside a pair neither helps nor hurts. Card count is the game's real
+ * currency, so the only way to spend it well is to make better categories.
+ *
+ * High Card is worth nothing, which is what stops a run being chopped into
+ * 56 one-card hands: dead cards score zero however they are disposed of, so
+ * dumping them alongside a scoring hand is free and purely a board decision.
+ */
 export const CATEGORY_POINTS: Record<HandCategory, number> = {
   ROYAL_FLUSH: 200,
   STRAIGHT_FLUSH: 100,
@@ -43,8 +48,21 @@ export const CATEGORY_POINTS: Record<HandCategory, number> = {
   THREE_OF_A_KIND: 15,
   TWO_PAIR: 10,
   PAIR: 5,
-  HIGH_CARD: 1,
+  HIGH_CARD: 0,
 };
+
+/**
+ * Categories that are 5-card patterns by definition, and so are unreachable in
+ * a shorter hand however the cards fall. `categorizePartial` never returns one
+ * (there is a test pinning that), and the rules sheet marks these rows.
+ */
+export const FIVE_CARD_ONLY: ReadonlySet<HandCategory> = new Set<HandCategory>([
+  'ROYAL_FLUSH',
+  'STRAIGHT_FLUSH',
+  'FULL_HOUSE',
+  'FLUSH',
+  'STRAIGHT',
+]);
 
 export const CATEGORY_LABELS: Record<HandCategory, string> = {
   ROYAL_FLUSH: 'Royal Flush',

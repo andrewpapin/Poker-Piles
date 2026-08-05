@@ -47,8 +47,8 @@ rules live in components.
 | --- | --- |
 | `rng.ts` | `xmur3` string hash + `mulberry32` PRNG; also `todayKey()`, the UTC date string that seeds everything |
 | `deck.ts` | `buildDeck()` (canonical 56-card deck), `shuffle()`, `dealPiles(dateKey)` — the whole deal is a pure function of the date |
-| `evaluator.ts` | `evaluateHand()`: hand categorization, optimal wild-card resolution, partial-hand score scaling, memoized via a cache keyed on sorted card identities |
-| `reducer.ts` | `gameReducer`/`GameState`/`GameAction`: selection, submitting a hand, detecting end-of-run |
+| `evaluator.ts` | `evaluateHand()`: hand categorization and optimal wild-card resolution, memoized via a cache keyed on sorted card identities |
+| `reducer.ts` | `gameReducer`/`GameState`/`GameAction`: selection, hold slots, submitting a hand, giving up, detecting end-of-run |
 | `share.ts` | Spoiler-free share text: a block grid of per-hand tiers (never a rank, suit or category name); Web Share API with a clipboard (and `execCommand` textarea) fallback |
 | `storage.ts` | localStorage persistence for stats and an in-progress run; every access is try/catch-guarded since Safari private mode throws on write |
 | `types.ts` | Shared types (`Card`, `Pile`, `HandCategory`, `HandResult`, `GameState` shape helpers) and constants (`CATEGORY_POINTS`, `CATEGORY_TIER`, `PILE_COUNT`, `PILE_SIZE`, `MAX_HAND_SIZE`, `WILD_COUNT`) |
@@ -56,7 +56,8 @@ rules live in components.
 Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, holds it in a
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
 `livePileCount`) down to `Board`, `HandBar`, `Header`, `Results`. All mutation goes through
-`dispatch` with the four `GameAction` variants (`toggle`, `clear`, `submit`, `newGame`). Every
+`dispatch` with the `GameAction` variants (`toggle`, `toggleHeld`, `hold`, `clear`, `submit`,
+`giveUp`, `newGame`). Every
 state change is persisted to localStorage via `saveGame` in a `useEffect`, so a backgrounded
 tab silently picks its run back up.
 
@@ -71,16 +72,28 @@ tab silently picks its run back up.
   in a suit some natural card already holds. `evaluator.reference.test.ts` verifies this
   shortcut against an unrestricted 52-identity search, so preserve that invariant (and its
   test) if you touch wild resolution.
-- **Hands of fewer than 5 cards** score half (rounded to nearest point) and are restricted to
-  rank-based categories only (Four of a Kind down to High Card) — a straight or flush is
-  inherently a 5-card pattern and unreachable in a partial hand. This split lives in
-  `categorize5` vs. `categorizePartial`, and `bestCategory5` vs. `bestCategoryPartial`.
+- **Hand size never scales the score.** A hand is worth its category and nothing else, so a pair
+  is 5 points whether it came from two cards or from five. What hand size *does* decide is which
+  categories are reachable: fewer than 5 cards is restricted to rank-based categories (Four of a
+  Kind down to High Card), because a straight, flush or full house is inherently a 5-card
+  pattern. That split lives in `categorize5` vs. `categorizePartial`, and `bestCategory5` vs.
+  `bestCategoryPartial`; `FIVE_CARD_ONLY` in `types.ts` names the categories it excludes, and the
+  rules sheet marks them from that same set.
+- **High Card is worth 0, and that is load-bearing.** Because every one of the 56 cards is
+  eventually played, the quantity that governs strategy is points *per card*, not per hand. A
+  non-zero High Card would make chopping a run into single-card hands score better than playing
+  full ones (the old rules paid 1 point a card for exactly that), and it is what keeps padding a
+  hand with dead cards free rather than profitable — spare cards are a board-churn decision, not
+  a scoring one. Don't raise it without re-deriving that.
 - **Determinism**: `dealPiles(dateKey)` must stay a pure function of the date string for the
   daily-puzzle guarantee to hold — never introduce `Math.random()` or wall-clock reads into
   `game/` outside of `rng.ts`'s `todayKey()`.
+- **`giveUp` is a forfeit, not an auto-play**: it discards the remaining cards unscored and sets
+  `gaveUp`, which `Results` reads. It deliberately does not fabricate one-card hands for the
+  remainder — under this scoring they would all be worth 0 and would bury the run's real hands.
 - Scoring table (`CATEGORY_POINTS` in `types.ts`): Royal Flush 200, Straight Flush 100, Four of
   a Kind 60, Full House 40, Flush 30, Straight 25, Three of a Kind 15, Two Pair 10, Pair 5, High
-  Card 1.
+  Card 0.
 
 ## Deployment
 

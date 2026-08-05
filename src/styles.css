@@ -1009,6 +1009,25 @@ button {
   color: var(--accent);
 }
 
+/* Marks the rungs that are 5-card patterns by definition. Also used inline in
+   the rules copy to introduce itself, so it has to sit on a text baseline. */
+.ladder-five {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05em;
+  height: 1.05em;
+  margin-left: 0.35em;
+  padding: 0 0.2em;
+  border: 1px solid var(--hairline);
+  border-radius: 0.3em;
+  font-size: 0.82em;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink-3);
+  vertical-align: 0.05em;
+}
+
 /* ---------- Results ---------- */
 
 .results-score {
