@@ -25,9 +25,9 @@ describe('buildShareText', () => {
     result('PAIR', 2, 3),
   ];
 
-  it('summarises the run as a header line plus a link', () => {
+  it('summarises the run as name, date, score and a link', () => {
     expect(buildShareText('2026-08-03', 187, hands)).toBe(
-      ['Poker Piles · Aug 3 — 187', '3 hands', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
+      ['Poker Piles — Aug 3', 'Score: 187 (3 hands)', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
     );
   });
 
@@ -37,7 +37,7 @@ describe('buildShareText', () => {
 
   it('handles a run with no hands played', () => {
     expect(buildShareText('2026-08-03', 0, [])).toBe(
-      ['Poker Piles · Aug 3 — 0', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
+      ['Poker Piles — Aug 3', 'Score: 0', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
     );
   });
 

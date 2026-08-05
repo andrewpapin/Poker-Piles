@@ -16,9 +16,9 @@ export function formatPuzzleDate(dateKey: string): string {
  * the hands would leak the shape of the run.
  */
 export function buildShareText(dateKey: string, total: number, hands: HandResult[]): string {
-  const header = [`Poker Piles · ${formatPuzzleDate(dateKey)} — ${total}`];
-  if (hands.length > 0) header.push(`${hands.length} hand${hands.length === 1 ? '' : 's'}`);
-  return [...header, '', GAME_URL].join('\n');
+  let scoreLine = `Score: ${total}`;
+  if (hands.length > 0) scoreLine += ` (${hands.length} hand${hands.length === 1 ? '' : 's'})`;
+  return [`Poker Piles — ${formatPuzzleDate(dateKey)}`, scoreLine, '', GAME_URL].join('\n');
 }
 
 export type ShareOutcome = 'shared' | 'copied' | 'failed';
