@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { CardFace, cardLabel } from './CardFace';
 import { topCard } from '../game/deck';
 import { MAX_HAND_SIZE, PILE_SIZE } from '../game/types';
@@ -25,22 +24,6 @@ type Props = {
   onArmHold: (slot: number) => void;
   onToggleHeld: (slot: number) => void;
 };
-
-/**
- * The buried cards, drawn as offset card backs behind the face card. Each layer
- * is absolutely positioned inside a zero-height frame, so however many there
- * are they contribute nothing to layout — the pile's height comes from the face
- * card plus a constant reserve, and the board never reflows as piles drain.
- */
-function StackBacks({ buried }: { buried: number }) {
-  return (
-    <span className="pile-backs" aria-hidden="true">
-      {Array.from({ length: buried }, (_, i) => (
-        <i key={i} style={{ '--i': i } as CSSProperties} />
-      ))}
-    </span>
-  );
-}
 
 export function Pile({
   pile,
@@ -135,7 +118,6 @@ export function Pile({
         }
       >
         <span className="pile-stack">
-          <StackBacks buried={Math.min(buried, PILE_SIZE - 1)} />
           {/* Keyed on the card so a newly revealed top card replays its flip. */}
           <CardFace key={card.id} card={card} />
         </span>
