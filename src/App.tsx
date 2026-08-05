@@ -22,11 +22,13 @@ import {
   hasSeenHelp,
   loadGame,
   loadStats,
+  loadTheme,
   markHelpSeen,
   recordRun,
   saveGame,
+  saveTheme,
 } from './game/storage';
-import type { DailyStats } from './game/storage';
+import type { DailyStats, Theme } from './game/storage';
 
 function bootstrap(): GameState {
   const dateKey = todayKey();
@@ -34,10 +36,19 @@ function bootstrap(): GameState {
   return loadGame(dateKey) ?? initGame(dateKey);
 }
 
+// The inline script in index.html already stamped `data-theme` on <html>
+// before first paint (reading the same storage key, falling back to the
+// system preference); this just mirrors that starting point into React state
+// so later toggles have something to flip.
+function bootstrapTheme(): Theme {
+  return loadTheme() ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, bootstrap);
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [showHelp, setShowHelp] = useState(() => !hasSeenHelp());
+  const [theme, setTheme] = useState<Theme>(bootstrapTheme);
   const [toast, setToast] = useState<{ id: number; label: string; score: number } | null>(null);
   // Which empty hold slot is armed to receive the next card tapped on the board.
   const [armedHoldSlot, setArmedHoldSlot] = useState<number | null>(null);
@@ -47,6 +58,19 @@ export default function App() {
   useEffect(() => {
     saveGame(state);
   }, [state]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute(
+      'content',
+      theme === 'dark' ? '#141311' : '#fbf7f0',
+    );
+    saveTheme(theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  }, []);
 
   useEffect(() => {
     // `state.recorded` guards across reloads (it's persisted); `recordedRef`
@@ -137,9 +161,11 @@ export default function App() {
         dateKey={state.dateKey}
         total={state.total}
         handsPlayed={state.hands.length}
+        theme={theme}
         onNewGame={handleNewGame}
         onHelp={() => setShowHelp(true)}
         onGiveUp={handleGiveUp}
+        onToggleTheme={toggleTheme}
         canGiveUp={state.status === 'playing'}
       />
 

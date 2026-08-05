@@ -6,8 +6,34 @@
          in the stylesheet already kills the double-tap zoom this was guarding against. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#fbf7f0" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#141311" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fbf7f0" />
+    <!-- Stamps data-theme on <html> before first paint, so the page never
+         flashes the wrong theme then swaps. Reads the same explicit choice
+         App.tsx persists (game/storage.ts's `pokerpiles:v2:theme`), falling
+         back to the system preference only when the player has never
+         toggled — the toggle in the header is the source of truth after
+         that, not the phone's setting. Keep the storage key literal here in
+         sync with storage.ts; this must stay plain, synchronous script (no
+         module, no defer) so it runs before the stylesheet paints. -->
+    <script>
+      (function () {
+        var theme = 'light';
+        try {
+          var stored = localStorage.getItem('pokerpiles:v2:theme');
+          if (stored === 'light' || stored === 'dark') {
+            theme = stored;
+          } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            theme = 'dark';
+          }
+        } catch (e) {
+          // localStorage unavailable — fall through with the light default.
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#141311');
+        }
+      })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

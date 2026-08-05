@@ -17,6 +17,12 @@ import type { GameState, SelectionEntry } from './reducer';
 const STATS_KEY = 'pokerpiles:v2:stats';
 const GAME_KEY = 'pokerpiles:v2:game';
 const HELP_KEY = 'pokerpiles:v2:seenHelp';
+// Keep this key literal in sync with the inline bootstrap script in index.html,
+// which reads it before React (and this module) ever loads, to paint the right
+// theme on first frame instead of flashing light then swapping.
+const THEME_KEY = 'pokerpiles:v2:theme';
+
+export type Theme = 'light' | 'dark';
 
 export type DailyStats = {
   dateKey: string;
@@ -143,6 +149,24 @@ export function markHelpSeen(): void {
     localStorage.setItem(HELP_KEY, '1');
   } catch {
     // Ignored — worst case the sheet greets them again next visit.
+  }
+}
+
+/** The explicit theme choice, if the player has ever toggled it — absent otherwise. */
+export function loadTheme(): Theme | null {
+  try {
+    const raw = localStorage.getItem(THEME_KEY);
+    return raw === 'light' || raw === 'dark' ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveTheme(theme: Theme): void {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // Ignored — worst case the choice doesn't survive a reload.
   }
 }
 
