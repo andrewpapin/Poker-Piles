@@ -573,22 +573,19 @@ button {
   font-size: 0.36em;
   font-weight: 800;
   letter-spacing: 0.2em;
+  /* Centring counts the trailing letter-space, which would sit the word left of
+     centre; the padding hands that half-space back. */
+  padding-left: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
   line-height: 1;
 }
 
-/* The rank repeated along the bottom edge. It sets in the card's own ink at
-   roughly index size rather than the wild's tracked-out small caps — it is a
-   value, not a label. The trailing letter-space is negative, so centring the
-   text box would push the glyphs right of centre; the padding gives that back. */
+/* The rank spelled out. Same slot and same setting as the wild's wordmark —
+   only the colour changes, so it reads as the card's own ink rather than as the
+   accent-coloured label a wild wears. */
 .card-wordmark--rank {
-  bottom: 0.3em;
-  font-size: 0.62em;
-  letter-spacing: -0.05em;
-  padding-right: 0.05em;
   color: var(--card-ink);
-  font-variant-numeric: tabular-nums;
 }
 
 .card--ghost {
