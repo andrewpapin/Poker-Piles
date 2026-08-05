@@ -1069,11 +1069,58 @@ button {
   }
 }
 
-/* ---------- Results ---------- */
+/* ---------- Results ----------
+
+   The end of a run is a page, not a sheet. Once the board is gone there is
+   nothing left underneath to peek at, and a drawer over a dead table reads as
+   an interruption of a game that is already over — so the results take the
+   shell's flexible row outright, in the play area's place. The page still obeys
+   the never-scroll rule: `.results-body` is the only scroller, so however long
+   the run was, Play again and Share stay pinned in view. */
+
+.results-page {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  animation: results-in var(--t-sheet) var(--ease) both;
+}
+
+/* Centred when it fits — a one-hand run would otherwise sit in a column of
+   dead space — but `safe` so a long run still starts at the top edge instead of
+   overflowing equally in both directions and hiding its first hands. The
+   flex-start line ahead of it is the fallback for engines that drop `safe`. */
+.results-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  justify-content: safe center;
+}
+
+.results-eyebrow {
+  margin: 0;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.results-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.5rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--hairline);
+}
 
 .results-score {
   margin: 0.35rem 0 0;
-  font-size: clamp(3.2rem, 16vw, 4rem);
+  font-size: clamp(3.4rem, 18vw, 5rem);
   font-weight: 800;
   line-height: 0.85;
   letter-spacing: -0.05em;
@@ -1280,6 +1327,20 @@ button {
   }
 }
 
+/* The results page rises a little instead of sliding in from an edge — it
+   replaces the play area rather than covering it, so it should not read as
+   something arriving on top. */
+@keyframes results-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes count-in {
   from {
     opacity: 0;
@@ -1354,6 +1415,29 @@ button {
 
   .hold-tray {
     padding: 0.35rem 0.8rem;
+  }
+
+  /* Vertical room is the scarce axis and horizontal room is plentiful — the
+     same trade that turns the board into one row of eight. So the hero moves
+     beside the hand list rather than on top of it, which is the difference
+     between four hands visible and a dozen. */
+  .results-body {
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    align-content: start;
+    column-gap: 1.5rem;
+    padding-top: 0.25rem;
+  }
+
+  .results-score {
+    font-size: 2.8rem;
+  }
+
+  .results-list {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    margin-top: 0;
   }
 }
 
@@ -1483,6 +1567,41 @@ button {
     grid-auto-columns: max-content;
     justify-content: center;
     gap: 0.5rem;
+  }
+
+  /* No board to sit beside once the run is over, so the rail layout collapses
+     back to a single centred column. */
+  .app--finished {
+    grid-template-columns: minmax(0, 34rem);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 0;
+    padding-bottom: 2.5rem;
+  }
+
+  /* The rail's stacked wordmark-over-tools exists to fill a column beside the
+     board. With no board, the header goes back to a page header: one row, tools
+     on the right, and the vertical room it frees goes to the hand list. */
+  .app--finished .header {
+    padding-bottom: 0.75rem;
+  }
+
+  .app--finished .header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .app--finished .header-tools {
+    margin-top: 0;
+  }
+
+  .results-body {
+    padding-top: 1.25rem;
+  }
+
+  .results-actions {
+    padding-top: 1.25rem;
   }
 
   /* A centred modal card rather than a bottom sheet. */

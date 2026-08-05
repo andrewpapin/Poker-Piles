@@ -16,6 +16,10 @@ type Props = {
   onPlayAgain: () => void;
 };
 
+/**
+ * The end-of-run screen. It is a page, not an overlay: it takes the play area's
+ * place in the shell once the run is over, so nothing is left showing behind it.
+ */
 export function Results({ dateKey, total, hands, gaveUp, stats, onPlayAgain }: Props) {
   const [shareLabel, setShareLabel] = useState('Share');
 
@@ -32,9 +36,9 @@ export function Results({ dateKey, total, hands, gaveUp, stats, onPlayAgain }: P
   }
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-label="Run complete">
-      <div className="sheet">
-        <p className="sheet-eyebrow">{gaveUp ? 'Gave up' : 'Deck cleared'}</p>
+    <main className="results-page">
+      <div className="results-body">
+        <h2 className="results-eyebrow">{gaveUp ? 'Gave up' : 'Deck cleared'}</h2>
         <p className="results-score">{total}</p>
         <p className="results-best">
           {hands.length} hand{hands.length === 1 ? '' : 's'}
@@ -65,16 +69,16 @@ export function Results({ dateKey, total, hands, gaveUp, stats, onPlayAgain }: P
             </li>
           ))}
         </ol>
-
-        <div className="sheet-actions">
-          <button type="button" className="btn btn--ghost" onClick={onPlayAgain}>
-            Play again
-          </button>
-          <button type="button" className="btn btn--primary" onClick={handleShare}>
-            {shareLabel}
-          </button>
-        </div>
       </div>
-    </div>
+
+      <div className="results-actions">
+        <button type="button" className="btn btn--ghost" onClick={onPlayAgain}>
+          Play again
+        </button>
+        <button type="button" className="btn btn--primary" onClick={handleShare}>
+          {shareLabel}
+        </button>
+      </div>
+    </main>
   );
 }

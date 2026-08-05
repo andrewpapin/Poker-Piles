@@ -155,6 +155,40 @@ export default function App() {
   const heldSelection = selectedHeldIndices(state);
   const toggleHeld = useCallback((slot: number) => dispatch({ type: 'toggleHeld', slot }), []);
 
+  // A finished run replaces the play area outright — board, hold tray and hand
+  // bar all go, and the results page takes the shell's flexible row.
+  const finished = state.status === 'complete';
+
+  if (finished) {
+    return (
+      <div className="app app--finished">
+        <Header
+          dateKey={state.dateKey}
+          total={state.total}
+          handsPlayed={state.hands.length}
+          theme={theme}
+          onNewGame={handleNewGame}
+          onHelp={() => setShowHelp(true)}
+          onGiveUp={handleGiveUp}
+          onToggleTheme={toggleTheme}
+          canGiveUp={false}
+          showStats={false}
+        />
+
+        <Results
+          dateKey={state.dateKey}
+          total={state.total}
+          hands={state.hands}
+          gaveUp={state.gaveUp}
+          stats={stats ?? loadStats(state.dateKey)}
+          onPlayAgain={handleNewGame}
+        />
+
+        {showHelp && <HowToPlay onClose={closeHelp} />}
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Header
@@ -167,6 +201,7 @@ export default function App() {
         onGiveUp={handleGiveUp}
         onToggleTheme={toggleTheme}
         canGiveUp={state.status === 'playing'}
+        showStats
       />
 
       <main className="main">
@@ -211,17 +246,6 @@ export default function App() {
       />
 
       {showHelp && <HowToPlay onClose={closeHelp} />}
-
-      {state.status === 'complete' && !showHelp && (
-        <Results
-          dateKey={state.dateKey}
-          total={state.total}
-          hands={state.hands}
-          gaveUp={state.gaveUp}
-          stats={stats ?? loadStats(state.dateKey)}
-          onPlayAgain={handleNewGame}
-        />
-      )}
     </div>
   );
 }
