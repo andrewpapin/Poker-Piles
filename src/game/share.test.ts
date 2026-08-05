@@ -27,8 +27,14 @@ describe('buildShareText', () => {
 
   it('summarises the run as a block grid', () => {
     expect(buildShareText('2026-08-03', 187, hands)).toBe(
-      ['Poker Piles · Aug 3 — 187', '3 hands', '', '🟥🟧🟨'].join('\n'),
+      ['Poker Piles · Aug 3 — 187', '3 hands', '', '🟥🟧🟨', '', 'https://andrewpapin.github.io/Poker-Piles/'].join(
+        '\n',
+      ),
     );
+  });
+
+  it('ends with a link back to the game', () => {
+    expect(buildShareText('2026-08-03', 187, hands)).toMatch(/https:\/\/andrewpapin\.github\.io\/Poker-Piles\/$/);
   });
 
   it('uses one block per hand, coloured by tier', () => {
@@ -41,14 +47,16 @@ describe('buildShareText', () => {
   it('wraps at eight hands so a full run stays short', () => {
     const run = Array.from({ length: 14 }, () => result('PAIR', 5, 5));
     const lines = buildShareText('2026-08-03', 70, run).split('\n');
-    // Header, count, blank, then exactly two grid rows — not fourteen.
-    expect(lines).toHaveLength(5);
+    // Header, count, blank, two grid rows, blank, url — not fourteen grid lines.
+    expect(lines).toHaveLength(7);
     expect(lines[3]).toHaveLength([...'🟨'].length * 8 * 2);
     expect([...lines[4]].length).toBe([...'🟨'].length * 6);
   });
 
   it('handles a run with no hands played', () => {
-    expect(buildShareText('2026-08-03', 0, [])).toBe('Poker Piles · Aug 3 — 0');
+    expect(buildShareText('2026-08-03', 0, [])).toBe(
+      ['Poker Piles · Aug 3 — 0', '', 'https://andrewpapin.github.io/Poker-Piles/'].join('\n'),
+    );
   });
 
   it('uses only emoji with broad device coverage — never the card-back glyph', () => {

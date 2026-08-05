@@ -12,6 +12,9 @@ const TIER_BLOCKS = ['⬜', '🟨', '🟧', '🟥', '🟪'] as const;
 /** Hands per row: keeps a full ~14-hand run to two rows instead of 14 lines. */
 const BLOCKS_PER_ROW = 8;
 
+/** Linked back from the share text so a paste doubles as an invite. */
+const GAME_URL = 'https://andrewpapin.github.io/Poker-Piles/';
+
 /** "2026-08-03" -> "Aug 3". Parsed as UTC so it matches the puzzle key exactly. */
 export function formatPuzzleDate(dateKey: string): string {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -27,7 +30,7 @@ export function formatPuzzleDate(dateKey: string): string {
  */
 export function buildShareText(dateKey: string, total: number, hands: HandResult[]): string {
   const header = [`Poker Piles · ${formatPuzzleDate(dateKey)} — ${total}`];
-  if (hands.length === 0) return header.join('\n');
+  if (hands.length === 0) return [...header, '', GAME_URL].join('\n');
 
   header.push(`${hands.length} hand${hands.length === 1 ? '' : 's'}`, '');
 
@@ -36,7 +39,7 @@ export function buildShareText(dateKey: string, total: number, hands: HandResult
   for (let i = 0; i < blocks.length; i += BLOCKS_PER_ROW) {
     rows.push(blocks.slice(i, i + BLOCKS_PER_ROW).join(''));
   }
-  return [...header, ...rows].join('\n');
+  return [...header, ...rows, '', GAME_URL].join('\n');
 }
 
 export type ShareOutcome = 'shared' | 'copied' | 'failed';
