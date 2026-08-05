@@ -70,11 +70,12 @@ export function Header({
             type="button"
             className="icon-btn"
             onClick={onToggleTheme}
-            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            aria-label={theme === 'dark' ? 'Switch to party theme' : 'Switch to night theme'}
+            title={theme === 'dark' ? 'Switch to party theme' : 'Switch to night theme'}
           >
             {theme === 'dark' ? (
-              /* Sun: the action this button performs is "switch to light". */
+              /* Sparkle: the action this button performs is "switch to party".
+                 (The `light` theme value is the Party palette — see styles.css.) */
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -85,11 +86,14 @@ export function Header({
                 aria-hidden="true"
                 focusable="false"
               >
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 3v1.6M12 19.4V21M4.9 4.9l1.13 1.13M17.97 17.97 19.1 19.1M3 12h1.6M19.4 12H21M4.9 19.1l1.13-1.13M17.97 6.03 19.1 4.9" />
+                <path d="M10 3.5C10 7 12.5 9.5 16 9.5 12.5 9.5 10 12 10 15.5 10 12 7.5 9.5 4 9.5 7.5 9.5 10 7 10 3.5z" />
+                <path
+                  strokeWidth="1.9"
+                  d="M17.5 14c0 1.4 1.1 2.5 2.5 2.5-1.4 0-2.5 1.1-2.5 2.5 0-1.4-1.1-2.5-2.5-2.5 1.4 0 2.5-1.1 2.5-2.5z"
+                />
               </svg>
             ) : (
-              /* Crescent moon: the action this button performs is "switch to dark". */
+              /* Crescent moon: the action this button performs is "switch to night". */
               <svg
                 viewBox="0 0 24 24"
                 fill="none"

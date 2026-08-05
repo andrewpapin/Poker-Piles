@@ -1,9 +1,8 @@
-/* Poker Piles — a warm, tactile daily puzzle.
-   Paper-cream ground, sunken trays, real cards with corner indices and drawn
-   pips, one indigo accent that is deliberately outside the four suit hues so
-   "selected" can never be mistaken for a suit. Portrait mobile is the primary
-   target and the whole game fits one screen at every size — see the --cw
-   derivation in .app, which is what actually guarantees that. */
+/* Poker Piles — a neon, tactile daily puzzle.
+   Near-black ground, raised trays, real cards with corner indices and drawn
+   pips, and four saturated suit hues. Portrait mobile is the primary target
+   and the whole game fits one screen at every size — see the --cw derivation
+   in .app, which is what actually guarantees that. */
 
 @font-face {
   font-family: 'Outfit';
@@ -13,53 +12,64 @@
   font-display: swap;
 }
 
+/* The Party theme: the default, and the one the toggle's `light` value now
+   selects. It is dark-grounded like the night theme below, so both themes
+   declare `color-scheme: dark` — they differ in temperature, not in polarity.
+   Night is a warm, dimmed room; Party is near-black with saturated neon on
+   top. The elevation ladder is carried entirely by lightness (#09 ground →
+   #13 trays → #18 sheets → #1e cards) plus hairlines, since shadows do
+   almost nothing this dark. */
 :root {
   --font: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --surface: #fbf7f0;
-  --surface-sunk: #f2ebdf;
-  --surface-raise: #ffffff;
+  --surface: #09090b;
+  --surface-sunk: #131316;
+  --surface-raise: #18181b;
 
-  --card: #ffffff;
-  --card-ink: #1e1b18;
+  --card: #1e1e23;
+  --card-ink: #e4e4e7;
 
-  --hairline: #e4dbcc;
-  --hairline-strong: #cfc3af;
+  --hairline: #27272a;
+  --hairline-strong: #3f3f46;
 
-  --ink: #1e1b18;
-  --ink-2: #6e655c;
-  --ink-3: #a79c8e;
+  --ink: #e4e4e7;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
 
-  --accent: #3a4bd8;
-  --accent-hi: #2e3cb8;
-  --accent-ink: #ffffff;
-  --accent-soft: #e8eafd;
+  --accent: #f472b6;
+  --accent-hi: #f9a8d4;
+  --accent-ink: #2b0715;
+  --accent-soft: #3a1027;
 
-  /* Spade / heart / diamond / club. Heart and diamond are separated on hue
-     (crimson vs ochre) rather than lightness, because at pip size a red/orange
-     pair collapses into one colour. */
-  --suit-s: #23201c;
-  --suit-h: #be2e42;
-  --suit-d: #b26a0c;
-  --suit-c: #26694c;
+  /* Spade / heart / diamond / club. The accent pink and the heart rose are
+     the closest pair in this palette, so selection leans on the ring and the
+     lift as much as on hue — see .pile--selected .card. */
+  --suit-s: #2dd4bf;
+  --suit-h: #fb7185;
+  --suit-d: #facc15;
+  --suit-c: #4ade80;
 
   /* Hand-strength ramp, matched to the emoji blocks in the share text so the
-     score card and the pasted grid read as the same artefact. */
-  --tier-0: #ded6c6;
-  --tier-1: #e8c33e;
-  --tier-2: #e2853a;
-  --tier-3: #d2483f;
-  --tier-4: #8a5bc4;
+     score card and the pasted grid read as the same artefact. Cool to hot,
+     landing on the accent for the best hands. */
+  --tier-0: #3f3f46;
+  --tier-1: #2dd4bf;
+  --tier-2: #4ade80;
+  --tier-3: #facc15;
+  --tier-4: #f472b6;
 
   --r-panel: 20px;
   --r-btn: 14px;
   --r-chip: 999px;
 
-  --sh-card: 0 1px 1.5px rgba(30, 27, 24, 0.07), 0 3px 8px -3px rgba(30, 27, 24, 0.13);
-  --sh-lift: 0 2px 3px rgba(30, 27, 24, 0.1), 0 12px 22px -8px rgba(30, 27, 24, 0.28);
-  --sh-panel: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(30, 27, 24, 0.05);
-  --sh-sheet: 0 -10px 40px -12px rgba(30, 27, 24, 0.32);
-  --sh-btn: 0 1px 0 rgba(30, 27, 24, 0.1), 0 3px 10px -3px rgba(58, 75, 216, 0.4);
+  /* Shadows do almost nothing on a near-black ground; top hairlines carry the
+     elevation instead, and the primary button gets a pink bloom so the one
+     neon glow in the theme lands on the thing you press. */
+  --sh-card: 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 14px -8px rgba(0, 0, 0, 0.8);
+  --sh-lift: 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 26px -10px rgba(0, 0, 0, 0.9);
+  --sh-panel: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --sh-sheet: 0 -10px 40px -12px rgba(0, 0, 0, 0.75);
+  --sh-btn: 0 2px 14px -3px rgba(244, 114, 182, 0.55);
 
   --t-fast: 120ms;
   --t-base: 200ms;
@@ -68,15 +78,15 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 /* Theme is an explicit choice (the header toggle), not a read of the phone's
    system setting — `data-theme` is stamped onto <html> by an inline script in
    index.html before first paint, and kept in sync by App.tsx after that.
-   Not an inversion — a designed dark. Card faces go dark too: eight bright
-   white rectangles on a black ground is the worst thing a card game can do to
-   someone playing in bed. */
+   The night theme: warm and dimmed where Party is cool and saturated. Card
+   faces go dark here too — eight bright white rectangles on a black ground is
+   the worst thing a card game can do to someone playing in bed. */
 :root[data-theme='dark'] {
   --surface: #141311;
   --surface-sunk: #1b1917;
