@@ -113,7 +113,7 @@ export function Pile({
         <span className="pile-stack">
           <span className="card card--ghost" />
         </span>
-        <span className="pile-count">0</span>
+        <span className="pile-count">0/{PILE_SIZE}</span>
       </div>
     );
   }
@@ -140,7 +140,7 @@ export function Pile({
           <CardFace key={card.id} card={card} />
         </span>
       </button>
-      <span className="pile-count" aria-hidden="true">{pile.length}</span>
+      <span className="pile-count" aria-hidden="true">{pile.length}/{PILE_SIZE}</span>
     </div>
   );
 }
