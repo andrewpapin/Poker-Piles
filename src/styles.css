@@ -726,10 +726,6 @@ button {
   text-overflow: ellipsis;
 }
 
-.readout-name--idle {
-  color: var(--ink-3);
-}
-
 /* `pre` is load-bearing: the idle note is a single space, and without it the
    line collapses and the bar jumps height every other turn. */
 .readout-note {

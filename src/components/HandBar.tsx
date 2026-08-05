@@ -7,7 +7,6 @@ type Props = {
   cards: Card[];
   livePiles: number;
   heldCount: number;
-  handsPlayed: number;
   onClear: () => void;
   onSubmit: () => void;
 };
@@ -28,7 +27,7 @@ function Tiers({ tier }: { tier: number | null }) {
   );
 }
 
-export function HandBar({ cards, livePiles, heldCount, handsPlayed, onClear, onSubmit }: Props) {
+export function HandBar({ cards, livePiles, heldCount, onClear, onSubmit }: Props) {
   const hand = cards.length > 0 ? evaluateHand(cards) : null;
   // Once piles and held cards combined can't reach 5, straights and flushes are
   // off the table for the rest of the run — worth saying, since nothing on the
@@ -45,10 +44,9 @@ export function HandBar({ cards, livePiles, heldCount, handsPlayed, onClear, onS
     const piles = `${livePiles} pile${livePiles === 1 ? '' : 's'}`;
     const left = heldCount > 0 ? `${piles} + ${heldCount} held left` : `${piles} left`;
     note = `${left} · no straights or flushes`;
-  } else if (handsPlayed === 0) {
-    note = 'One card per pile';
   } else {
-    // The opening instruction has done its job — stop repeating it every turn.
+    // Nothing selected and nothing to flag: the bar stays quiet rather than
+    // restating the rules every turn.
     note = ' ';
   }
 
@@ -56,8 +54,11 @@ export function HandBar({ cards, livePiles, heldCount, handsPlayed, onClear, onS
     <div className="handbar">
       <div className="readout">
         <div className="readout-hand">
-          <span className={`readout-name${hand ? '' : ' readout-name--idle'}`}>
-            {hand ? CATEGORY_LABELS[hand.category] : 'Select up to five'}
+          {/* Idle renders a non-breaking space, not an empty string: the name
+              line has to hold its height or the note below it slides up and the
+              readout shifts every time a selection starts or clears. */}
+          <span className="readout-name">
+            {hand ? CATEGORY_LABELS[hand.category] : ' '}
           </span>
           <span className="readout-note">{note}</span>
         </div>

@@ -167,7 +167,6 @@ export default function App() {
         cards={selection}
         livePiles={livePileCount(state)}
         heldCount={heldCount(state)}
-        handsPlayed={state.hands.length}
         onClear={() => dispatch({ type: 'clear' })}
         onSubmit={() => {
           setArmedHoldSlot(null);
