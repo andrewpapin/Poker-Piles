@@ -350,12 +350,19 @@ Recorded as decisions, not debt:
 
 - **The daily seed is trivially predictable.** `xmur3(dateKey)` (`src/game/rng.ts:36-38`)
   means anyone can compute any day's deal in advance, past or future. This is inherent to
-  the "same deal for everyone, derived from the date, no backend" design and is harmless
-  with no leaderboard. It would need revisiting only if scores ever became competitive or
-  server-verified.
-- **No backend, no accounts, no sync.** Consequences accepted: stats are per-device, and
-  nothing survives clearing site data. This is also why the app has no privacy surface at
-  all — a genuine strength worth preserving.
+  the "same deal for everyone, derived from the date" design. Anonymous score collection
+  does not change the call: the average is a shared curiosity, not a leaderboard, and no
+  score is server-verified. Revisit only if scores ever become genuinely competitive.
+- **Still no accounts and no sync.** The one server dependency is anonymous score
+  collection (see CLAUDE.md's "Score collection"): a completed run posts its score so the
+  results sheet can show the day's average. Consequences accepted and unchanged — local
+  stats are still per-device, nothing survives clearing site data, and the game plays
+  fully offline. The privacy surface stays deliberately tiny: what leaves the browser is
+  a score, a hand count, a gave-up flag and a random id that identifies nobody.
+- **Score submission is not tamper-proof, knowingly.** The server stamps the date, bounds
+  the score and keeps one row per browser per day, which is enough for an honest average.
+  Someone clearing site data to submit repeatedly can still skew it. Building anti-cheat
+  for a puzzle with no leaderboard would cost more than it protects.
 - **`finishGame` plays each remaining card as its own single-card hand**
   (`src/game/reducer.ts:163-191`), which is deliberately not score-maximising. It is an
   escape hatch, not an autoplayer.

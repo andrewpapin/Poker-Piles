@@ -1092,6 +1092,65 @@ button {
   color: var(--ink-2);
 }
 
+/* Today's average across everyone. Sits between the player's own numbers and
+   their hand breakdown, and is absent entirely when the network didn't answer
+   — the row must never reserve space it might not fill. */
+.results-average {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0.7rem 0 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--r-chip);
+  background: var(--surface-sunk);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+
+.results-average.is-pending {
+  color: var(--ink-3);
+}
+
+.results-average-label {
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+
+.results-average-value {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.results-average-meta {
+  font-weight: 600;
+}
+
+/* Pushed to the far end so the player's standing reads as its own verdict
+   rather than as more of the sentence. */
+.results-average-delta {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Deliberately not the tier ramp: those five colours mean "how good was that
+   hand", and reusing them for "how did you do against everyone else" would
+   make a run of yellow rows and a yellow verdict look related. */
+.results-average-delta[data-delta='up'] {
+  color: var(--accent);
+}
+
+.results-average-delta[data-delta='down'] {
+  color: var(--ink-3);
+}
+
 .results-summary {
   display: flex;
   flex-wrap: wrap;
