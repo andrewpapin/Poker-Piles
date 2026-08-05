@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatPuzzleDate } from '../game/share';
+import type { Theme } from '../game/storage';
 import type { HandResult } from '../game/types';
 
 type Props = {
@@ -7,9 +8,11 @@ type Props = {
   total: number;
   handsPlayed: number;
   lastHand: HandResult | null;
+  theme: Theme;
   onNewGame: () => void;
   onHelp: () => void;
   onGiveUp: () => void;
+  onToggleTheme: () => void;
   canGiveUp: boolean;
 };
 
@@ -46,9 +49,11 @@ export function Header({
   total,
   handsPlayed,
   lastHand,
+  theme,
   onNewGame,
   onHelp,
   onGiveUp,
+  onToggleTheme,
   canGiveUp,
 }: Props) {
   const displayTotal = useCountUp(total);
@@ -64,6 +69,44 @@ export function Header({
           <span className="header-date">{formatPuzzleDate(dateKey)}</span>
         </div>
         <div className="header-tools">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onToggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {theme === 'dark' ? (
+              /* Sun: the action this button performs is "switch to light". */
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 3v1.6M12 19.4V21M4.9 4.9l1.13 1.13M17.97 17.97 19.1 19.1M3 12h1.6M19.4 12H21M4.9 19.1l1.13-1.13M17.97 6.03 19.1 4.9" />
+              </svg>
+            ) : (
+              /* Crescent moon: the action this button performs is "switch to dark". */
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M20.2 14.4A8.6 8.6 0 1 1 9.6 3.8a6.8 6.8 0 0 0 10.6 10.6z" />
+              </svg>
+            )}
+          </button>
           {canGiveUp && (
             <button
               type="button"
