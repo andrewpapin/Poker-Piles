@@ -470,6 +470,31 @@ button {
   opacity: 0.5;
 }
 
+/* A drained pile becomes an extra hold pile in place, sized off --cw like its
+   live siblings rather than the smaller --hold-cw used by the fixed tray. A
+   filled slot reuses .pile--selected's lift/ring when chosen for the hand. */
+.pile-hold-empty-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink-3);
+}
+
+.pile-hold-empty--armed .card {
+  opacity: 1;
+  border-style: solid;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  animation: hold-armed-pulse 1.1s var(--ease) infinite;
+}
+
+.pile--hold-slot .card {
+  animation: slot-pop 300ms var(--ease-spring) both;
+}
+
 /* ---------- Card ---------- */
 
 .card {

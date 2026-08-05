@@ -1,6 +1,6 @@
 import { dealPiles, topCard } from './deck';
 import { evaluateHand } from './evaluator';
-import { HOLD_SLOT_COUNT, MAX_HAND_SIZE } from './types';
+import { HOLD_SLOT_COUNT, MAX_HAND_SIZE, PILE_COUNT } from './types';
 import type { Card, HandResult, Pile } from './types';
 
 /** A tap targets either a pile's face-up top card or a banked card in a hold slot. */
@@ -12,8 +12,20 @@ export type GameState = {
   /** UTC date key identifying the puzzle, e.g. "2026-08-03". */
   dateKey: string;
   piles: Pile[];
-  /** Cards banked out of a pile for a later hand; length is always HOLD_SLOT_COUNT. */
+  /**
+   * Cards banked for a later hand. Starts at HOLD_SLOT_COUNT (the fixed hold
+   * tray) and grows by one slot every time a pile drains for the first time —
+   * see `pileHoldIndex`. Every consumer here treats it as an opaque array of
+   * nullable slots, so growth needs no other reducer changes.
+   */
   held: (Card | null)[];
+  /**
+   * Parallel to `piles`. Null until a pile drains naturally (via `submit` or
+   * `hold`), at which point it holds that pile's index into `held` — the
+   * extra hold slot it became. A pile emptied by `giveUp` is never assigned
+   * one, since the run is already over by then.
+   */
+  pileHoldIndex: (number | null)[];
   /** Entries currently selected for the in-progress hand, in tap order. */
   selected: SelectionEntry[];
   hands: HandResult[];
@@ -37,12 +49,37 @@ export function initGame(dateKey: string): GameState {
     dateKey,
     piles: dealPiles(dateKey),
     held: Array(HOLD_SLOT_COUNT).fill(null),
+    pileHoldIndex: Array(PILE_COUNT).fill(null),
     selected: [],
     hands: [],
     total: 0,
     status: 'playing',
     gaveUp: false,
   };
+}
+
+/**
+ * A pile that just drained for the first time becomes an extra hold slot in
+ * its own right. Appends one new slot to `held` per newly-drained pile and
+ * records the mapping in `pileHoldIndex` — the only place either array grows,
+ * so the two never drift out of lockstep.
+ */
+function growHoldForDrainedPiles(
+  piles: Pile[],
+  held: (Card | null)[],
+  pileHoldIndex: (number | null)[],
+): { held: (Card | null)[]; pileHoldIndex: (number | null)[] } {
+  let nextHeld = held;
+  let nextIndex = pileHoldIndex;
+  piles.forEach((pile, i) => {
+    if (pile.length === 0 && nextIndex[i] === null) {
+      if (nextHeld === held) nextHeld = [...held];
+      if (nextIndex === pileHoldIndex) nextIndex = [...pileHoldIndex];
+      nextIndex[i] = nextHeld.length;
+      nextHeld.push(null);
+    }
+  });
+  return { held: nextHeld, pileHoldIndex: nextIndex };
 }
 
 /** The cards backing the current selection (pile-origin or held-origin), in tap order. */
@@ -126,7 +163,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (slot === -1 || state.held[slot] != null) return state;
 
       const piles = state.piles.map((p, i) => (i === action.pile ? p.slice(0, -1) : p));
-      const held = state.held.map((c, i) => (i === slot ? card : c));
+      const heldAfterBank = state.held.map((c, i) => (i === slot ? card : c));
+      // Banking the last card of a pile drains it just like playing it would,
+      // so it converts into its own extra hold slot the same way.
+      const { held, pileHoldIndex } = growHoldForDrainedPiles(piles, heldAfterBank, state.pileHoldIndex);
       // The card is about to move; a stale selection pointing at this pile would silently
       // start referring to whatever card is revealed underneath, so drop it — this is also
       // how "select a card, then tap an empty hold slot" banks the selected card.
@@ -135,7 +175,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         : state.selected;
       // Banking a card can only ever fill a slot, never empty every pile *and* every hold slot
       // at once, so this action can never complete the game — status is left untouched.
-      return { ...state, piles, held, selected };
+      return { ...state, piles, held, pileHoldIndex, selected };
     }
 
     case 'clear':
@@ -149,13 +189,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const takenHeld = new Set(state.selected.filter((e) => e.origin === 'held').map((e) => e.index));
 
       const piles = state.piles.map((pile, i) => (takenPiles.has(i) ? pile.slice(0, -1) : pile));
-      const held = state.held.map((card, i) => (takenHeld.has(i) ? null : card));
+      const heldAfterPlay = state.held.map((card, i) => (takenHeld.has(i) ? null : card));
+      const { held, pileHoldIndex } = growHoldForDrainedPiles(piles, heldAfterPlay, state.pileHoldIndex);
       const exhausted = piles.every((pile) => pile.length === 0) && held.every((c) => c === null);
 
       return {
         ...state,
         piles,
         held,
+        pileHoldIndex,
         selected: [],
         hands: [...state.hands, result],
         total: state.total + result.score,

@@ -16,7 +16,7 @@ import {
   selectedPileIndices,
 } from './game/reducer';
 import type { GameState } from './game/reducer';
-import { CATEGORY_LABELS } from './game/types';
+import { CATEGORY_LABELS, HOLD_SLOT_COUNT } from './game/types';
 import {
   clearGame,
   hasSeenHelp,
@@ -125,6 +125,8 @@ export default function App() {
   );
 
   const selection = selectedCards(state);
+  const heldSelection = selectedHeldIndices(state);
+  const toggleHeld = useCallback((slot: number) => dispatch({ type: 'toggleHeld', slot }), []);
 
   return (
     <div className="app">
@@ -146,13 +148,19 @@ export default function App() {
           selectedCount={state.selected.length}
           holdArmed={armedHoldSlot !== null}
           onToggle={handlePileTap}
+          pileHoldIndex={state.pileHoldIndex}
+          held={state.held}
+          selectedHeldIndices={heldSelection}
+          armedHoldSlot={armedHoldSlot}
+          onArmHold={handleArmHoldSlot}
+          onToggleHeld={toggleHeld}
         />
         <HoldSlots
-          held={state.held}
-          selected={selectedHeldIndices(state)}
+          held={state.held.slice(0, HOLD_SLOT_COUNT)}
+          selected={heldSelection.filter((i) => i < HOLD_SLOT_COUNT)}
           selectedCount={state.selected.length}
           armedSlot={armedHoldSlot}
-          onToggle={(slot) => dispatch({ type: 'toggleHeld', slot })}
+          onToggle={toggleHeld}
           onArm={handleArmHoldSlot}
         />
         {toast && (

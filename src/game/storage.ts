@@ -99,7 +99,9 @@ export function clearGame(): void {
  * Restores an in-progress run so a backgrounded mobile tab does not lose it.
  * Anything stale or malformed is discarded rather than trusted. Saves from before hold slots
  * existed lack `held` and store `selected` as plain pile-index numbers — those are migrated
- * in place rather than discarded, so a returning player doesn't lose their run over it.
+ * in place rather than discarded, so a returning player doesn't lose their run over it. Saves
+ * from before drained piles could become extra hold slots lack `pileHoldIndex` (and `held` may
+ * be shorter than a run that has since grown past HOLD_SLOT_COUNT) — both are defaulted too.
  */
 export function loadGame(dateKey: string): GameState | null {
   const stored = readJson<GameState & { selected: unknown[] }>(GAME_KEY);
@@ -111,14 +113,17 @@ export function loadGame(dateKey: string): GameState | null {
     !Array.isArray(stored.hands) ||
     !Array.isArray(stored.selected) ||
     typeof stored.total !== 'number' ||
-    (stored.held !== undefined && (!Array.isArray(stored.held) || stored.held.length !== HOLD_SLOT_COUNT))
+    (stored.held !== undefined && (!Array.isArray(stored.held) || stored.held.length < HOLD_SLOT_COUNT)) ||
+    (stored.pileHoldIndex !== undefined &&
+      (!Array.isArray(stored.pileHoldIndex) || stored.pileHoldIndex.length !== PILE_COUNT))
   ) {
     return null;
   }
 
   const held = stored.held ?? Array(HOLD_SLOT_COUNT).fill(null);
+  const pileHoldIndex = stored.pileHoldIndex ?? Array(PILE_COUNT).fill(null);
   const selected: SelectionEntry[] = stored.selected.map((e) =>
     typeof e === 'number' ? { origin: 'pile', index: e } : (e as SelectionEntry),
   );
-  return { ...stored, held, selected, gaveUp: stored.gaveUp ?? false };
+  return { ...stored, held, pileHoldIndex, selected, gaveUp: stored.gaveUp ?? false };
 }

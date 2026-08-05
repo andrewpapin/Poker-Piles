@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import { CardFace, cardLabel } from './CardFace';
 import { topCard } from '../game/deck';
-import { PILE_SIZE } from '../game/types';
-import type { Pile as PileType } from '../game/types';
+import { MAX_HAND_SIZE, PILE_SIZE } from '../game/types';
+import type { Card, Pile as PileType } from '../game/types';
 
 type Props = {
   pile: PileType;
@@ -12,6 +12,18 @@ type Props = {
   /** A hold slot is armed: tapping this pile's top card banks it there instead of selecting it. */
   holdArmed: boolean;
   onToggle: (index: number) => void;
+  /**
+   * This pile's own extra hold slot, once it has drained naturally — null
+   * until then (or forever, if the pile was force-emptied by giving up).
+   */
+  holdSlot: number | null;
+  /** The card banked in `holdSlot`, if any. */
+  heldCard: Card | null;
+  heldSelected: boolean;
+  selectedCount: number;
+  armedHoldSlot: number | null;
+  onArmHold: (slot: number) => void;
+  onToggleHeld: (slot: number) => void;
 };
 
 /**
@@ -30,12 +42,72 @@ function StackBacks({ buried }: { buried: number }) {
   );
 }
 
-export function Pile({ pile, index, selected, disabled, holdArmed, onToggle }: Props) {
+export function Pile({
+  pile,
+  index,
+  selected,
+  disabled,
+  holdArmed,
+  onToggle,
+  holdSlot,
+  heldCard,
+  heldSelected,
+  selectedCount,
+  armedHoldSlot,
+  onArmHold,
+  onToggleHeld,
+}: Props) {
   const card = topCard(pile);
 
   if (!card) {
-    // Kept in the flow at full size so the 4x2 grid holds its shape as it
-    // drains — a cleared pile reads as "done", not as a hole in the board.
+    // A pile that drained naturally becomes an extra hold pile right where it
+    // sat — still kept in the flow at full size so the 4x2 grid holds its
+    // shape, but now interactive instead of a dead placeholder.
+    if (holdSlot !== null) {
+      if (!heldCard) {
+        const armed = armedHoldSlot === holdSlot;
+        return (
+          <div className="pile pile--hold-slot">
+            <button
+              type="button"
+              className={`pile-select pile-hold-empty${armed ? ' pile-hold-empty--armed' : ''}`}
+              onClick={() => onArmHold(holdSlot)}
+              aria-pressed={armed}
+              aria-label={
+                armed
+                  ? `Extra hold pile ${index + 1}, armed — tap a card to hold it here`
+                  : `Extra hold pile ${index + 1}, empty`
+              }
+            >
+              <span className="pile-stack">
+                <span className="card card--ghost pile-hold-empty-plus" aria-hidden="true">
+                  +
+                </span>
+              </span>
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div className={`pile pile--hold-slot${heldSelected ? ' pile--selected' : ''}`}>
+          <button
+            type="button"
+            className="pile-select"
+            onClick={() => onToggleHeld(holdSlot)}
+            disabled={selectedCount >= MAX_HAND_SIZE && !heldSelected}
+            aria-pressed={heldSelected}
+            aria-label={`Extra hold pile ${index + 1}, ${cardLabel(heldCard)}`}
+          >
+            <span className="pile-stack">
+              <CardFace key={heldCard.id} card={heldCard} />
+            </span>
+          </button>
+        </div>
+      );
+    }
+
+    // Force-emptied by giving up, never drained through play — stays inert.
     return (
       <div className="pile pile--spent" aria-hidden="true">
         <span className="pile-stack">
