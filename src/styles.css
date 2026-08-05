@@ -283,9 +283,8 @@ button {
 
 .header-stats {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
+  flex-direction: column;
+  align-items: flex-start;
   margin-top: 0.35rem;
 }
 
@@ -312,7 +311,7 @@ button {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-2);
-  text-align: right;
+  text-align: left;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1319,8 +1318,7 @@ button {
 
   .header-stats {
     margin-top: 0;
-    align-items: center;
-    gap: 1rem;
+    align-items: flex-start;
   }
 
   .score {
