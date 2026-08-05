@@ -26,6 +26,7 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
             <li>
               <strong>Holds</strong> save a card for a future hand.
             </li>
+            <li>An emptied pile becomes an extra hold pile.</li>
             <li>Game over when you run out of cards.</li>
             <li>Same deal for everyone, every day. Resets at midnight UTC.</li>
           </ul>

@@ -8,7 +8,7 @@ import {
   selectedCards,
 } from './reducer';
 import type { GameState } from './reducer';
-import { PILE_COUNT, PILE_SIZE } from './types';
+import { HOLD_SLOT_COUNT, PILE_COUNT, PILE_SIZE } from './types';
 
 const SEED = '2026-08-03';
 const play = (state: GameState, ...piles: number[]): GameState =>
@@ -24,6 +24,7 @@ describe('initGame', () => {
     expect(state).toMatchObject({
       selected: [],
       held: [null, null],
+      pileHoldIndex: Array(PILE_COUNT).fill(null),
       hands: [],
       total: 0,
       status: 'playing',
@@ -204,7 +205,55 @@ describe('holding', () => {
       type: 'submit',
     });
     expect(finished.status).toBe('complete');
-    expect(finished.held).toEqual([null, null]);
+    // Every pile has drained naturally by now, so `held` has grown to include
+    // an extra slot per pile — all still null, since nothing was banked into them.
+    expect(finished.held.every((c) => c === null)).toBe(true);
+  });
+});
+
+describe('a drained pile becoming an extra hold pile', () => {
+  it('converts a pile drained via submit, growing a new slot for it', () => {
+    let state = initGame(SEED);
+    for (let i = 0; i < PILE_SIZE; i++) state = play(state, 0);
+
+    expect(state.piles[0]).toHaveLength(0);
+    expect(state.pileHoldIndex[0]).not.toBeNull();
+    expect(state.held).toHaveLength(HOLD_SLOT_COUNT + 1);
+    expect(state.held[state.pileHoldIndex[0]!]).toBeNull();
+    // Every other pile hasn't drained, so it has no slot of its own yet.
+    expect(state.pileHoldIndex.filter((i) => i !== null)).toHaveLength(1);
+  });
+
+  it('converts a pile drained via hold, not just submit', () => {
+    let state = initGame(SEED);
+    for (let i = 0; i < PILE_SIZE - 1; i++) state = play(state, 0);
+    expect(state.piles[0]).toHaveLength(1);
+    expect(state.pileHoldIndex[0]).toBeNull();
+
+    const lastCard = topCard(state.piles[0]);
+    state = gameReducer(state, { type: 'hold', pile: 0 });
+
+    expect(state.piles[0]).toHaveLength(0);
+    expect(state.pileHoldIndex[0]).not.toBeNull();
+    // The card that drained the pile banks wherever it was aimed (the first
+    // open base slot here) — the pile's own new slot starts out empty.
+    expect(state.held[0]).toEqual(lastCard);
+    expect(state.held[state.pileHoldIndex[0]!]).toBeNull();
+  });
+
+  it('banks a card into a newly-unlocked pile slot and plays it', () => {
+    let state = initGame(SEED);
+    for (let i = 0; i < PILE_SIZE; i++) state = play(state, 0);
+    const slot = state.pileHoldIndex[0]!;
+
+    const bankedCard = topCard(state.piles[1]);
+    state = gameReducer(state, { type: 'hold', pile: 1, slot });
+    expect(state.held[slot]).toEqual(bankedCard);
+
+    state = gameReducer(state, { type: 'toggleHeld', slot });
+    state = gameReducer(state, { type: 'submit' });
+    expect(state.held[slot]).toBeNull();
+    expect(state.hands[state.hands.length - 1].cardCount).toBe(1);
   });
 });
 
@@ -226,6 +275,8 @@ describe('a full run', () => {
     // 56 cards across hands of at most 5 needs at least 12 hands.
     expect(state.hands.length).toBeGreaterThanOrEqual(12);
     expect(state.hands.reduce((sum, h) => sum + h.score, 0)).toBe(state.total);
+    // Every pile drained naturally, so every one converted to a hold slot.
+    expect(state.pileHoldIndex.every((i) => i !== null)).toBe(true);
 
     // A finished board accepts nothing further.
     expect(gameReducer(state, { type: 'toggle', pile: 0 })).toBe(state);
