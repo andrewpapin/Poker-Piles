@@ -9,26 +9,25 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
       <div className="sheet">
         <p className="sheet-eyebrow">How to play</p>
         <ul className="rules">
-          <li>Eight piles of seven. Only each pile's top card is face up.</li>
+          <li>8 piles of 7 cards. Only the top card of each pile is face up.</li>
           <li>
-            Tap up to <strong>5</strong> face-up cards — at most one per pile — then play them as a
-            poker hand.
+            Tap up to <strong>5</strong> face-up cards (one per pile) and play them as a poker
+            hand.
           </li>
-          <li>Every pile you draw from flips its next card. Piles you skip stay put.</li>
+          <li>Piles you play from flip their next card. Piles you skip stay put.</li>
           <li>
-            Tap an empty <strong>hold</strong> slot, then a card — or a card, then an empty slot —
-            to bank it there. Held cards flip the pile beneath them straight away and can join any
-            later hand.
-          </li>
-          <li>
-            Four <strong>wilds</strong> are shuffled in. A wild becomes whatever rank and suit
-            scores you the most.
+            Tap a card, then an empty <strong>hold</strong> slot, to bank it for later — that flips
+            the pile beneath it right away.
           </li>
           <li>
-            Hands of fewer than 5 cards score <strong>half</strong>, and only count pairs, trips and
-            quads — no short straights or flushes. Spread your picks to keep piles alive.
+            4 <strong>wilds</strong> are mixed in. Each one becomes whatever rank and suit scores
+            best.
           </li>
-          <li>Same deal for everyone, every day. Resets at midnight UTC.</li>
+          <li>
+            Hands under 5 cards score <strong>half</strong>, and only pairs, trips and quads count
+            — no straights or flushes.
+          </li>
+          <li>Same puzzle for everyone, every day. Resets at midnight UTC.</li>
         </ul>
 
         {/* Two columns so the whole ladder — and the dismiss button — clear the fold on a small phone. */}
