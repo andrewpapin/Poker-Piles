@@ -32,7 +32,11 @@ export function HoldSlots({ held, selected, selectedCount, armedSlot, onToggle, 
                 aria-label={
                   armed ? `Hold slot ${i + 1}, armed — tap a card to hold it here` : `Hold slot ${i + 1}, empty`
                 }
-              />
+              >
+                <span className="hold-slot-empty-plus" aria-hidden="true">
+                  +
+                </span>
+              </button>
             );
           }
 
