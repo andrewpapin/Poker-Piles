@@ -6,10 +6,13 @@ type Props = {
   held: (Card | null)[];
   selected: number[];
   selectedCount: number;
+  /** The empty slot currently armed for holding, or null if none is. */
+  armedSlot: number | null;
   onToggle: (slot: number) => void;
+  onArm: (slot: number) => void;
 };
 
-export function HoldSlots({ held, selected, selectedCount, onToggle }: Props) {
+export function HoldSlots({ held, selected, selectedCount, armedSlot, onToggle, onArm }: Props) {
   return (
     <div className="hold-tray">
       <span className="hold-tray-label" aria-hidden="true">
@@ -18,11 +21,17 @@ export function HoldSlots({ held, selected, selectedCount, onToggle }: Props) {
       <div className="hold-slots">
         {held.map((card, i) => {
           if (!card) {
+            const armed = armedSlot === i;
             return (
-              <span
+              <button
                 key={i}
-                className="card card--ghost hold-slot-empty"
-                aria-label={`Hold slot ${i + 1}, empty`}
+                type="button"
+                className={`card card--ghost hold-slot-empty${armed ? ' hold-slot-empty--armed' : ''}`}
+                onClick={() => onArm(i)}
+                aria-pressed={armed}
+                aria-label={
+                  armed ? `Hold slot ${i + 1}, armed — tap a card to hold it here` : `Hold slot ${i + 1}, empty`
+                }
               />
             );
           }

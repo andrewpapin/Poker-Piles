@@ -24,7 +24,7 @@ export type GameState = {
 export type GameAction =
   | { type: 'toggle'; pile: number }
   | { type: 'toggleHeld'; slot: number }
-  | { type: 'hold'; pile: number }
+  | { type: 'hold'; pile: number; slot?: number }
   | { type: 'clear' }
   | { type: 'submit' }
   | { type: 'newGame'; dateKey: string };
@@ -119,8 +119,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       // start referring to whatever card is revealed underneath.
       if (state.selected.some((e) => e.origin === 'pile' && e.index === action.pile)) return state;
 
-      const slot = openHoldSlot(state);
-      if (slot === -1) return state;
+      // A specific slot is passed when the player armed it explicitly (tapped
+      // the empty slot, then the card); otherwise fall back to the first open one.
+      const slot = action.slot ?? openHoldSlot(state);
+      if (slot === -1 || state.held[slot] != null) return state;
 
       const piles = state.piles.map((p, i) => (i === action.pile ? p.slice(0, -1) : p));
       const held = state.held.map((c, i) => (i === slot ? card : c));

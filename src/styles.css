@@ -431,65 +431,12 @@ button {
   animation: none;
 }
 
-/* ---------- Hold chip ---------- */
-
-.pile-hold {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 3;
-  transform: translate(38%, -34%) translateY(var(--lift));
-  width: calc(var(--cw) * 0.34);
-  height: calc(var(--cw) * 0.34);
-  min-width: 22px;
-  min-height: 22px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-chip);
-  background: var(--surface-raise);
-  color: var(--ink-2);
-  box-shadow: var(--sh-card);
-  transition: transform var(--t-lift) var(--ease-spring),
-    background-color var(--t-fast) linear, color var(--t-fast) linear,
-    border-color var(--t-fast) linear;
-}
-
-.pile-hold svg {
-  width: 58%;
-  height: 58%;
-}
-
-/* Grows the tap target to ~44px without growing the chip. The chip sits mostly
-   outside the card, so little of the expanded target overlaps it. */
-.pile-hold::after {
-  content: '';
-  position: absolute;
-  inset: -11px;
-  border-radius: inherit;
-}
-
-/* Not merely dimmed: a disabled chip that kept its expanded hit box would
-   swallow taps aimed at the card's top-right corner. */
-.pile-hold:disabled {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.pile-hold:hover {
-  background: var(--accent);
+/* A hold slot is armed: every eligible pile gets a dashed accent ring so it
+   reads as "tap a card to hold it here" instead of the usual selection ring. */
+.pile--hold-armed .pile-select .card {
   border-color: var(--accent);
-  color: var(--accent-ink);
-}
-
-.pile-hold:active {
-  transform: translate(38%, -34%) translateY(var(--lift)) scale(0.88);
-}
-
-.pile-hold:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  border-style: dashed;
+  box-shadow: var(--sh-card), 0 0 0 3px var(--accent-soft);
 }
 
 /* ---------- Card ---------- */
@@ -658,13 +605,23 @@ button {
 .hold-slot,
 .hold-slot-empty {
   width: var(--hold-cw);
+  padding: 0;
+  background: none;
 }
 
 .hold-slot {
-  padding: 0;
   border: 0;
-  background: none;
   border-radius: var(--r-card);
+}
+
+/* Tapping an empty slot arms it: full opacity, a solid accent ring and a
+   gentle pulse invite the next tap to land on a card. */
+.hold-slot-empty--armed {
+  opacity: 1;
+  border-style: solid;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  animation: hold-armed-pulse 1.1s var(--ease) infinite;
 }
 
 .hold-slot .card {
@@ -684,7 +641,8 @@ button {
   opacity: 0.34;
 }
 
-.hold-slot:focus-visible {
+.hold-slot:focus-visible,
+.hold-slot-empty:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
@@ -1119,6 +1077,16 @@ button {
   100% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes hold-armed-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--accent-soft);
   }
 }
 

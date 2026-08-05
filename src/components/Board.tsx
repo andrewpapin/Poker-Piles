@@ -1,5 +1,4 @@
 import { Pile } from './Pile';
-import { topCard } from '../game/deck';
 import { MAX_HAND_SIZE } from '../game/types';
 import type { Pile as PileType } from '../game/types';
 
@@ -7,12 +6,12 @@ type Props = {
   piles: PileType[];
   selectedPiles: number[];
   selectedCount: number;
-  holdAvailable: boolean;
+  /** A hold slot is armed: the next pile tap banks a card instead of selecting it. */
+  holdArmed: boolean;
   onToggle: (index: number) => void;
-  onHold: (index: number) => void;
 };
 
-export function Board({ piles, selectedPiles, selectedCount, holdAvailable, onToggle, onHold }: Props) {
+export function Board({ piles, selectedPiles, selectedCount, holdArmed, onToggle }: Props) {
   const atCapacity = selectedCount >= MAX_HAND_SIZE;
 
   return (
@@ -25,12 +24,10 @@ export function Board({ piles, selectedPiles, selectedCount, holdAvailable, onTo
             pile={pile}
             index={i}
             selected={isSelected}
-            // At five cards you can still deselect, just not add a sixth.
-            disabled={atCapacity && !isSelected}
-            // Holding doesn't touch the hand selection, so it stays available at capacity.
-            holdEnabled={topCard(pile) !== null && !isSelected && holdAvailable}
+            // Holding doesn't touch the hand selection, so capacity never blocks it.
+            disabled={!holdArmed && atCapacity && !isSelected}
+            holdArmed={holdArmed && !isSelected}
             onToggle={onToggle}
-            onHold={onHold}
           />
         );
       })}
