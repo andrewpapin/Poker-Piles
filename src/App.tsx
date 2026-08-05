@@ -11,7 +11,6 @@ import {
   heldCount,
   initGame,
   livePileCount,
-  openHoldSlot,
   selectedCards,
   selectedHeldIndices,
   selectedPileIndices,
@@ -40,6 +39,8 @@ export default function App() {
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [showHelp, setShowHelp] = useState(() => !hasSeenHelp());
   const [toast, setToast] = useState<{ id: number; label: string; score: number } | null>(null);
+  // Which empty hold slot is armed to receive the next card tapped on the board.
+  const [armedHoldSlot, setArmedHoldSlot] = useState<number | null>(null);
   const recordedRef = useRef<GameState | null>(null);
   const prevHandCountRef = useRef(state.hands.length);
 
@@ -76,6 +77,7 @@ export default function App() {
       return;
     }
     clearGame();
+    setArmedHoldSlot(null);
     dispatch({ type: 'newGame', dateKey: todayKey() });
   }, [state.hands.length, state.selected.length, state.held]);
 
@@ -84,8 +86,25 @@ export default function App() {
     setShowHelp(false);
   }, []);
 
+  // Tapping a pile either selects it for the hand, or — if a hold slot is armed —
+  // banks its top card there instead. Either way the arming is consumed by the tap.
+  const handlePileTap = useCallback(
+    (pile: number) => {
+      if (armedHoldSlot !== null) {
+        dispatch({ type: 'hold', pile, slot: armedHoldSlot });
+        setArmedHoldSlot(null);
+        return;
+      }
+      dispatch({ type: 'toggle', pile });
+    },
+    [armedHoldSlot],
+  );
+
+  const handleArmHoldSlot = useCallback((slot: number) => {
+    setArmedHoldSlot((current) => (current === slot ? null : slot));
+  }, []);
+
   const selection = selectedCards(state);
-  const holdAvailable = openHoldSlot(state) !== -1;
 
   return (
     <div className="app">
@@ -103,15 +122,16 @@ export default function App() {
           piles={state.piles}
           selectedPiles={selectedPileIndices(state)}
           selectedCount={state.selected.length}
-          holdAvailable={holdAvailable}
-          onToggle={(pile) => dispatch({ type: 'toggle', pile })}
-          onHold={(pile) => dispatch({ type: 'hold', pile })}
+          holdArmed={armedHoldSlot !== null}
+          onToggle={handlePileTap}
         />
         <HoldSlots
           held={state.held}
           selected={selectedHeldIndices(state)}
           selectedCount={state.selected.length}
+          armedSlot={armedHoldSlot}
           onToggle={(slot) => dispatch({ type: 'toggleHeld', slot })}
+          onArm={handleArmHoldSlot}
         />
         {toast && (
           <div className="hand-toast" key={toast.id} aria-hidden="true">
@@ -127,7 +147,10 @@ export default function App() {
         heldCount={heldCount(state)}
         handsPlayed={state.hands.length}
         onClear={() => dispatch({ type: 'clear' })}
-        onSubmit={() => dispatch({ type: 'submit' })}
+        onSubmit={() => {
+          setArmedHoldSlot(null);
+          dispatch({ type: 'submit' });
+        }}
       />
 
       {showHelp && <HowToPlay onClose={closeHelp} />}
