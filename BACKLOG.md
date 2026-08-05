@@ -69,23 +69,23 @@ None open.
 
 ## P1 — Accessibility
 
-### PP-3 · Modals claim `aria-modal` but implement none of the contract — M
+### PP-3 · The rules sheet claims `aria-modal` but implements none of the contract — M
 
-**Evidence.** `src/components/HowToPlay.tsx:8` and `src/components/Results.tsx:34` both set
-`role="dialog" aria-modal="true"`. Neither moves focus into the dialog on open, traps focus
-inside it, closes on Escape, restores focus to the trigger on close, or marks the board
-behind as `inert`. A grep for `onKeyDown`, `Escape` or `autoFocus` across `src/` returns
-nothing.
+**Evidence.** `src/components/HowToPlay.tsx:8` sets `role="dialog" aria-modal="true"`. It does
+not move focus into the dialog on open, trap focus inside it, close on Escape, restore focus to
+the trigger on close, or mark the board behind as `inert`. A grep for `onKeyDown`, `Escape` or
+`autoFocus` across `src/` returns nothing.
 
 **Why it matters.** `aria-modal="true"` tells assistive tech that everything outside is
 unavailable — while the DOM says otherwise. Keyboard users tab straight out of the overlay
 into the board underneath and interact with a game they can't see. The how-to-play sheet
 opens automatically on a first visit, so this is the first thing a keyboard user meets.
 
-**Fix sketch.** One small `useModal` hook shared by both sheets: focus the sheet on mount,
-cycle Tab within it, close on Escape, restore focus on unmount, and set `inert` on `.app`
-while open. `HowToPlay` closes via `onClose`; `Results` has no dismiss action today, so
-decide whether Escape should close it at all or only trap focus.
+**Fix sketch.** Focus the sheet on mount, cycle Tab within it, close on Escape (`HowToPlay`
+already closes via `onClose`), restore focus on unmount, and set `inert` on `.app` while open.
+
+**Narrowed.** `Results` used to carry the same broken claim; it is a page now, not a dialog,
+so this is down to the one overlay.
 
 ### PP-4 · Playing a hand is never announced — S
 

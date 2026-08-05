@@ -12,6 +12,8 @@ type Props = {
   onGiveUp: () => void;
   onToggleTheme: () => void;
   canGiveUp: boolean;
+  /** False once the run is over, when the results page states the score itself. */
+  showStats: boolean;
 };
 
 /** Animates toward `value` instead of snapping, so a scored hand feels earned. */
@@ -52,6 +54,7 @@ export function Header({
   onGiveUp,
   onToggleTheme,
   canGiveUp,
+  showStats,
 }: Props) {
   const displayTotal = useCountUp(total);
   // True only while the count-up is running, which is exactly when the score
@@ -168,14 +171,16 @@ export function Header({
         </div>
       </div>
 
-      <div className="header-stats">
-        <span className={`score${counting ? ' score--live' : ''}`} aria-label={`Score ${total}`}>
-          {displayTotal}
-        </span>
-        <span className="header-meta">
-          {handsPlayed} hand{handsPlayed === 1 ? '' : 's'} played
-        </span>
-      </div>
+      {showStats && (
+        <div className="header-stats">
+          <span className={`score${counting ? ' score--live' : ''}`} aria-label={`Score ${total}`}>
+            {displayTotal}
+          </span>
+          <span className="header-meta">
+            {handsPlayed} hand{handsPlayed === 1 ? '' : 's'} played
+          </span>
+        </div>
+      )}
     </header>
   );
 }

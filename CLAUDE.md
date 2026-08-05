@@ -83,7 +83,7 @@ directly to preview the live selection; it reads the evaluator, it does not re-i
 | `HoldSlots.tsx` | The two hold slots — an occupied slot is a selectable card, an empty one is an armable "+" target |
 | `HandBar.tsx` | Live readout of the current selection (category, points, five-step tier meter) and the Clear / Play hand buttons |
 | `HowToPlay.tsx` | The rules sheet: a five-bullet lockup plus the full scoring ladder, rendered from `CATEGORY_POINTS` |
-| `Results.tsx` | The end-of-run sheet: score, per-category counts, per-hand list, Play again / Share |
+| `Results.tsx` | The end-of-run *page* — not an overlay: it replaces the play area once the run is over. Score, per-category counts, per-hand list, Play again / Share |
 
 Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, holds it in a
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
@@ -92,6 +92,11 @@ mutation goes through `dispatch` with the eight `GameAction` variants (`toggle`,
 `hold`, `clear`, `submit`, `giveUp`, `markRecorded`, `newGame`). Every state change is persisted
 to localStorage via `saveGame` in a `useEffect`, so a backgrounded tab silently picks its run
 back up.
+
+`App.tsx` renders one of two screens off `state.status`: the play screen (header, board, hold
+tray, hand bar) or, once the run is `complete`, the results page (header with its score block
+suppressed, then `Results` in the play area's place). The shell — `.app`, its `--cw` derivation
+and the `HowToPlay` overlay — is common to both; only the flexible middle row differs.
 
 `App.tsx` also holds three pieces of purely-presentational state that deliberately do **not**
 live in the reducer, because none of them affect the game: `showHelp`, the scored-hand `toast`,
@@ -179,7 +184,9 @@ known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGa
   derived in `.app` as the `min()` of a width-derived and a height-derived value so whichever
   axis is scarce wins. Everything else — card radius, pip size, stack offsets, hold-slot size —
   is computed from `--cw` in `em`/`calc`. If you add or resize chrome, update the `--header-h` /
-  `--holds-h` / `--handbar-h` estimates that feed `--board-h`.
+  `--holds-h` / `--handbar-h` estimates that feed `--board-h`. The results page obeys the same
+  rule the other way round: it takes the play area's row and scrolls only `.results-body`
+  internally, so a long run's hand list never pushes Play again / Share off-screen.
 - **Suits and icons are drawn as inline SVG paths, never typed as Unicode.** `♠♥♦♣` are missing
   from most webfont latin subsets, and several mobile platforms promote `♥`/`♦` to colour emoji.
   Same reasoning for the restart/help/flag glyphs in `Header`. (`SUIT_GLYPHS` still exists in
@@ -192,9 +199,9 @@ known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGa
   accent pink and the heart rose are neighbours. Selection there leans on the ring, the inset
   stroke and the lift as much as on hue; keep all three if you touch `.pile--selected .card`.
 - Accessibility is partial and known-incomplete: `aria-label`/`aria-pressed` are used
-  throughout, but the two overlays declare `aria-modal` without implementing focus trapping or
-  Escape, and scoring is not announced to assistive tech. See BACKLOG PP-3 through PP-5 before
-  "fixing" these piecemeal.
+  throughout, but the `HowToPlay` overlay declares `aria-modal` without implementing focus
+  trapping or Escape, and scoring is not announced to assistive tech. See BACKLOG PP-3 through
+  PP-5 before "fixing" these piecemeal.
 - Motion respects `prefers-reduced-motion` by zeroing durations rather than removing animations,
   so fill modes still land and elements don't get stranded mid-transition.
 
