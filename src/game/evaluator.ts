@@ -4,10 +4,12 @@ import type { Card, HandCategory, HandResult, NormalCard, Rank, Suit } from './t
 /**
  * Hand evaluation, independent of any UI.
  *
- * Two regimes:
+ * A hand scores its category and nothing else — the number of cards submitted
+ * never scales the result. The only thing hand size decides is which categories
+ * are reachable:
  *  - 5 cards: the full poker ladder, including straights and flushes.
- *  - fewer than 5 cards: rank-based categories only (a straight or a flush is a
- *    5-card pattern by definition), then a flat 50% penalty.
+ *  - fewer than 5 cards: rank-based categories only, since a straight or a
+ *    flush is a 5-card pattern by definition.
  *
  * Wild cards are always resolved to whatever identity scores highest.
  */
@@ -157,8 +159,9 @@ function cacheKey(cards: readonly Card[]): string {
 const cache = new Map<string, HandResult>();
 
 /**
- * Scores 1-5 cards, resolving any wilds in the player's favour.
- * Hands of fewer than 5 cards take a flat 50% penalty, rounded to the nearest point.
+ * Scores 1-5 cards, resolving any wilds in the player's favour. The score is
+ * the category's value regardless of how many cards were submitted; a short
+ * hand is only limited in which categories it can reach.
  */
 export function evaluateHand(cards: readonly Card[]): HandResult {
   if (cards.length < 1 || cards.length > MAX_HAND_SIZE) {
@@ -169,15 +172,12 @@ export function evaluateHand(cards: readonly Card[]): HandResult {
   const cached = cache.get(key);
   if (cached) return cached;
 
-  const partial = cards.length < MAX_HAND_SIZE;
-  const category = partial ? bestCategoryPartial(cards) : bestCategory5(cards);
-  const basePoints = CATEGORY_POINTS[category];
+  const short = cards.length < MAX_HAND_SIZE;
+  const category = short ? bestCategoryPartial(cards) : bestCategory5(cards);
   const result: HandResult = {
     category,
-    basePoints,
-    score: partial ? Math.round(basePoints * 0.5) : basePoints,
+    score: CATEGORY_POINTS[category],
     cardCount: cards.length,
-    partial,
   };
 
   cache.set(key, result);

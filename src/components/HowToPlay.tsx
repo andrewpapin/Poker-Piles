@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS, CATEGORY_POINTS } from '../game/types';
+import { CATEGORY_LABELS, CATEGORY_POINTS, FIVE_CARD_ONLY } from '../game/types';
 import type { HandCategory } from '../game/types';
 
 const LADDER = Object.keys(CATEGORY_POINTS) as HandCategory[];
@@ -25,8 +25,13 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
             scores you the most.
           </li>
           <li>
-            Hands of fewer than 5 cards score <strong>half</strong>, and only count pairs, trips and
-            quads — no short straights or flushes. Spread your picks to keep piles alive.
+            A hand scores its category whatever its size — a pair is a pair from two cards or from
+            five. Rows marked <span className="ladder-five">5</span> below need all five.
+          </li>
+          <li>
+            A hand that makes nothing scores <strong>0</strong>, so dead cards cost nothing to throw
+            in alongside a scoring hand — and doing it flips those piles. Spread your picks to keep
+            piles alive.
           </li>
           <li>Same deal for everyone, every day. Resets at midnight UTC.</li>
         </ul>
@@ -35,7 +40,15 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
         <dl className="ladder">
           {LADDER.map((category) => (
             <div key={category} className="ladder-row">
-              <dt>{CATEGORY_LABELS[category]}</dt>
+              <dt>
+                {CATEGORY_LABELS[category]}
+                {FIVE_CARD_ONLY.has(category) && (
+                  // The rules bullet above explains the marker, so it is decorative here.
+                  <span className="ladder-five" aria-hidden="true">
+                    5
+                  </span>
+                )}
+              </dt>
               <dd>{CATEGORY_POINTS[category]}</dd>
             </div>
           ))}

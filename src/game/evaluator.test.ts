@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateHand } from './evaluator';
+import { FIVE_CARD_ONLY } from './types';
 import type { Card, HandCategory, Rank, Suit } from './types';
 
 const RANK_FROM_LABEL: Record<string, Rank> = {
@@ -31,14 +32,14 @@ describe('natural 5-card hands', () => {
     [['QS', 'QH', 'QD', '3C', '8S'], 'THREE_OF_A_KIND', 15],
     [['JS', 'JH', '4D', '4C', '9S'], 'TWO_PAIR', 10],
     [['AS', 'AH', '6D', '9C', '3S'], 'PAIR', 5],
-    [['2S', '5H', '9D', 'JC', 'KS'], 'HIGH_CARD', 1],
+    [['2S', '5H', '9D', 'JC', 'KS'], 'HIGH_CARD', 0],
   ];
 
   it.each(CASES)('scores %s as %s', (codes, category, score) => {
     const result = hand(...codes);
     expect(result.category).toBe(category);
     expect(result.score).toBe(score);
-    expect(result.partial).toBe(false);
+    expect(result.cardCount).toBe(5);
   });
 
   it('treats the wheel as a straight but not a king-high wrap', () => {
@@ -105,24 +106,41 @@ describe('wild resolution', () => {
   });
 });
 
-describe('partial hands', () => {
-  it('halves the score and rounds to the nearest point', () => {
+describe('short hands', () => {
+  it('scores the category in full, however few cards were submitted', () => {
     expect(hand('9S', '9H', '9D', '9C')).toMatchObject({
       category: 'FOUR_OF_A_KIND',
-      basePoints: 60,
-      score: 30,
-      partial: true,
+      score: 60,
+      cardCount: 4,
     });
-    expect(hand('QS', 'QH', 'QD').score).toBe(8); // 15 * 0.5 = 7.5
-    expect(hand('AS', 'AH').score).toBe(3); // 5 * 0.5 = 2.5
-    expect(hand('AS').score).toBe(1); // 1 * 0.5 = 0.5
-    expect(hand('JS', 'JH', '4D', '4C').score).toBe(5); // two pair, 10 * 0.5
+    expect(hand('QS', 'QH', 'QD').score).toBe(15);
+    expect(hand('JS', 'JH', '4D', '4C').score).toBe(10);
+    expect(hand('AS', 'AH').score).toBe(5);
   });
 
-  it('never reports a straight or a flush, however suited', () => {
+  it('pays nothing for cards that make no hand', () => {
+    expect(hand('AS').score).toBe(0);
+    expect(hand('2S', '5H', '9D').score).toBe(0);
+  });
+
+  it('makes padding and chopping score identically, so neither is an exploit', () => {
+    // Three dead cards carried alongside a pair add nothing...
+    expect(hand('AS', 'AH', '6D', '9C', '3S').score).toBe(hand('AS', 'AH').score);
+    // ...and splitting them back out into single-card hands recovers nothing either.
+    const chopped = ['6D', '9C', '3S'].reduce((sum, code) => sum + hand(code).score, 0);
+    expect(chopped).toBe(0);
+  });
+
+  it('never reports a category that needs all five cards', () => {
     expect(hand('2C', '5C', '9C', 'JC').category).toBe('HIGH_CARD');
     expect(hand('8S', '9S', 'TS', 'JS').category).toBe('HIGH_CARD');
     expect(hand('7S', '8H', '9D').category).toBe('HIGH_CARD');
+    // The same board dealt as suited runs of every short length, against the
+    // set the rules sheet marks — a flush or straight must never surface here.
+    const suited = ['8S', '9S', 'TS', 'JS'];
+    for (let n = 1; n < 5; n++) {
+      expect(FIVE_CARD_ONLY.has(hand(...suited.slice(0, n)).category)).toBe(false);
+    }
   });
 
   it('resolves wilds in partial hands too', () => {

@@ -232,7 +232,7 @@ describe('a full run', () => {
     expect(gameReducer(state, { type: 'submit' })).toBe(state);
   });
 
-  it('forces partial hands once fewer than five piles survive', () => {
+  it('forces short hands once fewer than five piles survive', () => {
     let state = initGame(SEED);
     // Drain the first three piles by hammering only those.
     for (let i = 0; i < PILE_SIZE; i++) state = play(state, 0, 1, 2);
@@ -240,46 +240,51 @@ describe('a full run', () => {
 
     // Five piles remain, so a full hand is still reachable...
     state = play(state, 3, 4, 5, 6, 7);
-    expect(state.hands[state.hands.length - 1].partial).toBe(false);
+    expect(state.hands[state.hands.length - 1].cardCount).toBe(5);
 
-    // ...but draining another pile strands the rest as partials.
+    // ...but draining another pile caps every later hand at four cards, which
+    // costs nothing in points but puts straights and flushes out of reach.
     let drained = state;
     while (drained.piles[3].length > 0) drained = play(drained, 3);
     expect(livePileCount(drained)).toBe(4);
     const forced = play(drained, 4, 5, 6, 7);
-    expect(forced.hands[forced.hands.length - 1].partial).toBe(true);
+    expect(forced.hands[forced.hands.length - 1].cardCount).toBe(4);
   });
 });
 
-describe('finishGame', () => {
-  it('plays out every remaining card as its own hand and completes the game', () => {
+describe('giveUp', () => {
+  it('discards the remaining cards unscored and completes the game', () => {
     const before = initGame(SEED);
-    const after = gameReducer(before, { type: 'finishGame' });
+    const after = gameReducer(before, { type: 'giveUp' });
 
     expect(after.status).toBe('complete');
+    expect(after.gaveUp).toBe(true);
     expect(cardsRemaining(after)).toBe(0);
     expect(after.held).toEqual([null, null]);
     expect(after.selected).toEqual([]);
-    expect(after.hands).toHaveLength(PILE_COUNT * PILE_SIZE);
-    expect(after.hands.every((h) => h.cardCount === 1)).toBe(true);
-    expect(after.hands.reduce((sum, h) => sum + h.score, 0)).toBe(after.total);
+    // A forfeit is not an auto-play: no hands are invented on the way out.
+    expect(after.hands).toEqual([]);
+    expect(after.total).toBe(0);
   });
 
-  it('plays off held cards too, and drops the current selection', () => {
-    let state = gameReducer(initGame(SEED), { type: 'hold', pile: 0 });
-    state = gameReducer(state, { type: 'hold', pile: 1 });
-    state = gameReducer(state, { type: 'toggle', pile: 2 });
+  it('keeps the score already banked and drops held cards and the selection', () => {
+    let state = play(initGame(SEED), 0, 1, 2, 3, 4);
+    const banked = state.total;
+    const handsPlayed = state.hands.length;
+    state = gameReducer(state, { type: 'hold', pile: 0 });
+    state = gameReducer(state, { type: 'toggle', pile: 1 });
 
-    const after = gameReducer(state, { type: 'finishGame' });
+    const after = gameReducer(state, { type: 'giveUp' });
     expect(after.status).toBe('complete');
+    expect(after.total).toBe(banked);
+    expect(after.hands).toHaveLength(handsPlayed);
     expect(after.held).toEqual([null, null]);
     expect(after.selected).toEqual([]);
-    expect(after.hands).toHaveLength(PILE_COUNT * PILE_SIZE);
   });
 
   it('does nothing once the game is already complete', () => {
-    const state = gameReducer(initGame(SEED), { type: 'finishGame' });
-    expect(gameReducer(state, { type: 'finishGame' })).toBe(state);
+    const state = gameReducer(initGame(SEED), { type: 'giveUp' });
+    expect(gameReducer(state, { type: 'giveUp' })).toBe(state);
   });
 });
 

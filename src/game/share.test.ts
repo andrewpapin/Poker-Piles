@@ -4,10 +4,8 @@ import type { HandResult } from './types';
 
 const result = (category: HandResult['category'], cardCount: number, score: number): HandResult => ({
   category,
-  basePoints: score,
   score,
   cardCount,
-  partial: cardCount < 5,
 });
 
 describe('formatPuzzleDate', () => {
@@ -21,8 +19,8 @@ describe('formatPuzzleDate', () => {
 describe('buildShareText', () => {
   const hands = [
     result('FULL_HOUSE', 5, 40),
-    result('THREE_OF_A_KIND', 3, 8),
-    result('PAIR', 2, 3),
+    result('THREE_OF_A_KIND', 3, 15),
+    result('PAIR', 2, 5),
   ];
 
   it('summarises the run as name, date, score and a link', () => {

@@ -9,8 +9,8 @@ type Props = {
   lastHand: HandResult | null;
   onNewGame: () => void;
   onHelp: () => void;
-  onFinishGame: () => void;
-  canFinish: boolean;
+  onGiveUp: () => void;
+  canGiveUp: boolean;
 };
 
 /** Animates toward `value` instead of snapping, so a scored hand feels earned. */
@@ -48,8 +48,8 @@ export function Header({
   lastHand,
   onNewGame,
   onHelp,
-  onFinishGame,
-  canFinish,
+  onGiveUp,
+  canGiveUp,
 }: Props) {
   const displayTotal = useCountUp(total);
   // True only while the count-up is running, which is exactly when the score
@@ -64,15 +64,15 @@ export function Header({
           <span className="header-date">{formatPuzzleDate(dateKey)}</span>
         </div>
         <div className="header-tools">
-          {canFinish && (
+          {canGiveUp && (
             <button
               type="button"
               className="icon-btn"
-              onClick={onFinishGame}
-              aria-label="Finish game"
-              title="Play out all remaining cards automatically"
+              onClick={onGiveUp}
+              aria-label="Give up"
+              title="End the run here — remaining cards are discarded"
             >
-              {/* Fast-forward glyph: auto-plays every remaining card, one at a time. */}
+              {/* A white flag: the run ends on its current score, nothing is played out. */}
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -83,8 +83,8 @@ export function Header({
                 aria-hidden="true"
                 focusable="false"
               >
-                <path d="M4 6v12l8-6-8-6z" />
-                <path d="M13 6v12l8-6-8-6z" />
+                <path d="M6 21V4" />
+                <path d="M6 4.8h11l-2.6 4.1L17 13H6z" />
               </svg>
             </button>
           )}

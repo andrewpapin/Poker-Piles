@@ -86,12 +86,12 @@ export default function App() {
     setShowHelp(false);
   }, []);
 
-  const handleFinishGame = useCallback(() => {
-    if (!window.confirm('Finish the game? All remaining cards will be played automatically, one at a time.')) {
+  const handleGiveUp = useCallback(() => {
+    if (!window.confirm('Give up? Your remaining cards are discarded and the run ends on your current score.')) {
       return;
     }
     setArmedHoldSlot(null);
-    dispatch({ type: 'finishGame' });
+    dispatch({ type: 'giveUp' });
   }, []);
 
   // Tapping a pile either selects it for the hand, or — if a hold slot is armed —
@@ -135,8 +135,8 @@ export default function App() {
         lastHand={state.hands.length > 0 ? state.hands[state.hands.length - 1] : null}
         onNewGame={handleNewGame}
         onHelp={() => setShowHelp(true)}
-        onFinishGame={handleFinishGame}
-        canFinish={state.status === 'playing'}
+        onGiveUp={handleGiveUp}
+        canGiveUp={state.status === 'playing'}
       />
 
       <main className="main">
@@ -182,6 +182,7 @@ export default function App() {
           dateKey={state.dateKey}
           total={state.total}
           hands={state.hands}
+          gaveUp={state.gaveUp}
           stats={stats ?? loadStats(state.dateKey)}
           onPlayAgain={handleNewGame}
         />

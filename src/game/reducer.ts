@@ -19,6 +19,8 @@ export type GameState = {
   hands: HandResult[];
   total: number;
   status: 'playing' | 'complete';
+  /** True when the run ended via `giveUp` rather than by clearing the board. */
+  gaveUp: boolean;
 };
 
 export type GameAction =
@@ -27,7 +29,7 @@ export type GameAction =
   | { type: 'hold'; pile: number; slot?: number }
   | { type: 'clear' }
   | { type: 'submit' }
-  | { type: 'finishGame' }
+  | { type: 'giveUp' }
   | { type: 'newGame'; dateKey: string };
 
 export function initGame(dateKey: string): GameState {
@@ -39,6 +41,7 @@ export function initGame(dateKey: string): GameState {
     hands: [],
     total: 0,
     status: 'playing',
+    gaveUp: false,
   };
 }
 
@@ -160,34 +163,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'finishGame': {
+    case 'giveUp': {
       if (state.status !== 'playing') return state;
 
-      const piles = state.piles.map((pile) => [...pile]);
-      const held = [...state.held];
-      const hands = [...state.hands];
-      let total = state.total;
-
-      // Held cards are already exposed, so play them off first, then each pile
-      // top to bottom — every remaining card becomes its own single-card hand.
-      for (let slot = 0; slot < held.length; slot++) {
-        const card = held[slot];
-        if (!card) continue;
-        const result = evaluateHand([card]);
-        hands.push(result);
-        total += result.score;
-        held[slot] = null;
-      }
-
-      for (const pile of piles) {
-        while (pile.length > 0) {
-          const result = evaluateHand([pile.pop()!]);
-          hands.push(result);
-          total += result.score;
-        }
-      }
-
-      return { ...state, piles, held, selected: [], hands, total, status: 'complete' };
+      // A forfeit, not an auto-play: the remaining cards are discarded unscored.
+      // Playing them out singly would score nothing anyway (a lone card is a High
+      // Card, worth zero) and would only bury the run's real hands under a stack
+      // of zero-point rows in the results sheet.
+      return {
+        ...state,
+        piles: state.piles.map(() => []),
+        held: state.held.map(() => null),
+        selected: [],
+        gaveUp: true,
+        status: 'complete',
+      };
     }
 
     case 'newGame':
