@@ -33,6 +33,12 @@ export type GameState = {
   status: 'playing' | 'complete';
   /** True when the run ended via `giveUp` rather than by clearing the board. */
   gaveUp: boolean;
+  /**
+   * True once a completed run has been folded into the persisted daily stats
+   * (`recordRun`). Persisted rather than tracked only in memory, so a reload of
+   * a finished run never counts as a second play — see PP-1.
+   */
+  recorded: boolean;
 };
 
 export type GameAction =
@@ -42,6 +48,7 @@ export type GameAction =
   | { type: 'clear' }
   | { type: 'submit' }
   | { type: 'giveUp' }
+  | { type: 'markRecorded' }
   | { type: 'newGame'; dateKey: string };
 
 export function initGame(dateKey: string): GameState {
@@ -55,6 +62,7 @@ export function initGame(dateKey: string): GameState {
     total: 0,
     status: 'playing',
     gaveUp: false,
+    recorded: false,
   };
 }
 
@@ -86,7 +94,7 @@ function growHoldForDrainedPiles(
 export function selectedCards(state: GameState): Card[] {
   return state.selected
     .map((entry) => (entry.origin === 'pile' ? topCard(state.piles[entry.index]) : state.held[entry.index]))
-    .filter((c): c is Card => c !== null);
+    .filter((c): c is Card => c != null);
 }
 
 /** Pile indices currently selected, for components that only render pile state. */
@@ -221,6 +229,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         status: 'complete',
       };
     }
+
+    case 'markRecorded':
+      return state.recorded ? state : { ...state, recorded: true };
 
     case 'newGame':
       return initGame(action.dateKey);

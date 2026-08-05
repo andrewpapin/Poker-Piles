@@ -1,4 +1,5 @@
-import { HOLD_SLOT_COUNT, PILE_COUNT } from './types';
+import { CATEGORY_POINTS, HOLD_SLOT_COUNT, PILE_COUNT, PILE_SIZE } from './types';
+import type { Card, HandCategory, HandResult, Pile } from './types';
 import type { GameState, SelectionEntry } from './reducer';
 
 /**
@@ -49,6 +50,64 @@ function remove(key: string): void {
   }
 }
 
+/**
+ * Deep validation for a saved `GameState`, so a malformed or tampered save is
+ * discarded rather than trusted — see PP-2. `loadGame`'s old top-level-only
+ * checks let an out-of-range `selected` index or a bogus card reach the
+ * reducer/evaluator and throw, white-screening the app with no recovery path.
+ * Discarding a bad save is always recoverable; crashing on it is not.
+ */
+
+const VALID_SUITS = new Set(['S', 'H', 'D', 'C']);
+const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_POINTS) as HandCategory[]);
+
+function isValidCard(value: unknown): value is Card {
+  if (typeof value !== 'object' || value === null) return false;
+  const card = value as Record<string, unknown>;
+  if (typeof card.id !== 'string') return false;
+  if (card.kind === 'wild') return true;
+  return (
+    card.kind === 'normal' &&
+    typeof card.rank === 'number' &&
+    Number.isInteger(card.rank) &&
+    card.rank >= 2 &&
+    card.rank <= 14 &&
+    typeof card.suit === 'string' &&
+    VALID_SUITS.has(card.suit)
+  );
+}
+
+function isValidPile(value: unknown): value is Pile {
+  return Array.isArray(value) && value.length <= PILE_SIZE && value.every(isValidCard);
+}
+
+function isValidHeldSlot(value: unknown): value is Card | null {
+  return value === null || isValidCard(value);
+}
+
+function isValidHandResult(value: unknown): value is HandResult {
+  if (typeof value !== 'object' || value === null) return false;
+  const hand = value as Record<string, unknown>;
+  return (
+    typeof hand.category === 'string' &&
+    VALID_CATEGORIES.has(hand.category as HandCategory) &&
+    hand.score === CATEGORY_POINTS[hand.category as HandCategory] &&
+    typeof hand.cardCount === 'number' &&
+    Number.isInteger(hand.cardCount) &&
+    hand.cardCount >= 1 &&
+    hand.cardCount <= 5
+  );
+}
+
+function isValidSelectionEntry(value: unknown, pileCount: number, heldCount: number): value is SelectionEntry {
+  if (typeof value !== 'object' || value === null) return false;
+  const entry = value as Record<string, unknown>;
+  if (typeof entry.index !== 'number' || !Number.isInteger(entry.index)) return false;
+  if (entry.origin === 'pile') return entry.index >= 0 && entry.index < pileCount;
+  if (entry.origin === 'held') return entry.index >= 0 && entry.index < heldCount;
+  return false;
+}
+
 export function loadStats(dateKey: string): DailyStats {
   const stored = readJson<DailyStats>(STATS_KEY);
   if (stored && stored.dateKey === dateKey && typeof stored.bestScore === 'number') {
@@ -97,33 +156,58 @@ export function clearGame(): void {
 
 /**
  * Restores an in-progress run so a backgrounded mobile tab does not lose it.
- * Anything stale or malformed is discarded rather than trusted. Saves from before hold slots
- * existed lack `held` and store `selected` as plain pile-index numbers — those are migrated
- * in place rather than discarded, so a returning player doesn't lose their run over it. Saves
- * from before drained piles could become extra hold slots lack `pileHoldIndex` (and `held` may
- * be shorter than a run that has since grown past HOLD_SLOT_COUNT) — both are defaulted too.
+ * Anything stale or malformed is discarded rather than trusted — every field
+ * is validated, not just top-level shape, since a bad `selected` index or a
+ * bogus card reaches the reducer/evaluator and throws (PP-2). Saves from
+ * before hold slots existed lack `held` and store `selected` as plain
+ * pile-index numbers — those are migrated in place rather than discarded, so
+ * a returning player doesn't lose their run over it. Saves from before
+ * drained piles could become extra hold slots lack `pileHoldIndex` (and
+ * `held` may be shorter than a run that has since grown past
+ * HOLD_SLOT_COUNT) — both are defaulted too. Saves from before PP-1 lack
+ * `recorded` — defaulted to false, which re-records that one run at most.
  */
 export function loadGame(dateKey: string): GameState | null {
-  const stored = readJson<GameState & { selected: unknown[] }>(GAME_KEY);
+  const stored = readJson<Record<string, unknown>>(GAME_KEY);
+  if (!stored || stored.dateKey !== dateKey) return null;
+
+  if (!Array.isArray(stored.piles) || stored.piles.length !== PILE_COUNT || !stored.piles.every(isValidPile)) {
+    return null;
+  }
+  if (!Array.isArray(stored.hands) || !stored.hands.every(isValidHandResult)) return null;
+  if (typeof stored.total !== 'number' || !Number.isFinite(stored.total) || stored.total < 0) return null;
+  if (stored.status !== 'playing' && stored.status !== 'complete') return null;
+  if (stored.gaveUp !== undefined && typeof stored.gaveUp !== 'boolean') return null;
+  if (stored.recorded !== undefined && typeof stored.recorded !== 'boolean') return null;
+
+  const held = stored.held ?? Array(HOLD_SLOT_COUNT).fill(null);
+  if (!Array.isArray(held) || held.length < HOLD_SLOT_COUNT || !held.every(isValidHeldSlot)) return null;
+
+  const pileHoldIndex = stored.pileHoldIndex ?? Array(PILE_COUNT).fill(null);
   if (
-    !stored ||
-    stored.dateKey !== dateKey ||
-    !Array.isArray(stored.piles) ||
-    stored.piles.length !== PILE_COUNT ||
-    !Array.isArray(stored.hands) ||
-    !Array.isArray(stored.selected) ||
-    typeof stored.total !== 'number' ||
-    (stored.held !== undefined && (!Array.isArray(stored.held) || stored.held.length < HOLD_SLOT_COUNT)) ||
-    (stored.pileHoldIndex !== undefined &&
-      (!Array.isArray(stored.pileHoldIndex) || stored.pileHoldIndex.length !== PILE_COUNT))
+    !Array.isArray(pileHoldIndex) ||
+    pileHoldIndex.length !== PILE_COUNT ||
+    !pileHoldIndex.every((i) => i === null || (typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < held.length))
   ) {
     return null;
   }
 
-  const held = stored.held ?? Array(HOLD_SLOT_COUNT).fill(null);
-  const pileHoldIndex = stored.pileHoldIndex ?? Array(PILE_COUNT).fill(null);
+  if (!Array.isArray(stored.selected)) return null;
   const selected: SelectionEntry[] = stored.selected.map((e) =>
     typeof e === 'number' ? { origin: 'pile', index: e } : (e as SelectionEntry),
   );
-  return { ...stored, held, pileHoldIndex, selected, gaveUp: stored.gaveUp ?? false };
+  if (!selected.every((e) => isValidSelectionEntry(e, PILE_COUNT, held.length))) return null;
+
+  return {
+    dateKey,
+    piles: stored.piles,
+    held,
+    pileHoldIndex,
+    selected,
+    hands: stored.hands,
+    total: stored.total,
+    status: stored.status,
+    gaveUp: stored.gaveUp ?? false,
+    recorded: stored.recorded ?? false,
+  };
 }

@@ -339,6 +339,19 @@ describe('giveUp', () => {
   });
 });
 
+describe('markRecorded', () => {
+  it('flips recorded from false to true', () => {
+    const state = initGame(SEED);
+    expect(state.recorded).toBe(false);
+    expect(gameReducer(state, { type: 'markRecorded' }).recorded).toBe(true);
+  });
+
+  it('is a no-op once already recorded, so a reload cannot double-count a run', () => {
+    const state = gameReducer(initGame(SEED), { type: 'markRecorded' });
+    expect(gameReducer(state, { type: 'markRecorded' })).toBe(state);
+  });
+});
+
 describe('newGame', () => {
   it('redeals the same board for the same day', () => {
     const played = play(initGame(SEED), 0, 1, 2);

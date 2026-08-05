@@ -19,74 +19,51 @@ is concentrated in three places:
 Items are numbered `PP-n` and the numbers are stable: reference them in commit messages
 and PR titles. Sizes are rough: **S** ≈ under an hour, **M** ≈ half a day, **L** ≈ more.
 
-**Suggested first three:** PP-13 (CI on pull requests), then PP-1, then PP-2. PP-13 goes
-first because it protects every fix that follows it.
+**Suggested first three (done):** PP-13 (CI on pull requests), PP-1, and PP-2 (bundled with
+PP-7) have been fixed — see **Resolved** below.
+
+---
+
+## Resolved
+
+### PP-13 · CI never runs on pull requests
+
+Added `.github/workflows/ci.yml`, triggered on `pull_request` against `main`, running
+`npm ci`, `npm test`, `npm run build`. `deploy.yml` is untouched and still tests before
+deploying, so main keeps a second safety net.
+
+### PP-1 · Refreshing the results screen inflates the play count
+
+`GameState` gained a persisted `recorded: boolean` field (`src/game/reducer.ts`), set via a
+new `markRecorded` action once the completion effect in `App.tsx` has called `recordRun`.
+Because it's part of the saved state rather than an in-memory ref, a reload of a completed
+run no longer re-triggers `recordRun`. The in-memory `recordedRef` check stays alongside it
+as a same-session short-circuit. `loadGame` defaults `recorded` to `false` for saves that
+predate this field. Covered by `src/game/storage.test.ts` and a `markRecorded` case in
+`reducer.test.ts`.
+
+### PP-2 · A malformed saved game bricks the app with no recovery path
+
+`loadGame` (`src/game/storage.ts`) now validates every field, not just top-level shape: card
+identity and rank/suit ranges inside every pile and hold slot, `selected` entries against
+the current `piles`/`held` bounds, hand results against `CATEGORY_POINTS`, and `status`
+against the known enum. Any failure discards the save (`null`) instead of handing the
+reducer/evaluator a shape that throws. `src/main.tsx` also wraps `<App/>` in a new
+`src/ErrorBoundary.tsx`, whose fallback offers a "Start a fresh deal" button that clears the
+save and reloads — a backstop for whatever the deep validation doesn't anticipate. Covered
+by `src/game/storage.test.ts`.
+
+### PP-7 · `selectedCards`'s type guard is unsound
+
+Fixed as part of PP-2: `src/game/reducer.ts`'s `selectedCards` now filters with
+`c != null` instead of `c !== null`, so a stray `undefined` held-slot entry can no longer
+slip through and reach the evaluator.
 
 ---
 
 ## P0 — Correctness bugs
 
-Both are confirmed by reading the code path, not inferred.
-
-### PP-1 · Refreshing the results screen inflates the play count — S
-
-Finishing a run and reloading the page records the run again, once per reload.
-
-**Evidence.** `src/App.tsx:51-56` records a completed run, guarded only by
-`recordedRef.current === state` — an in-memory object-identity check. `saveGame` persists
-the completed state (`src/App.tsx:47-49`), so `bootstrap()` (`src/App.tsx:31-35`)
-rehydrates a `status: 'complete'` state on the next load with a fresh, empty ref. The
-guard cannot fire, and `recordRun` increments `plays` again (`src/game/storage.ts:55-65`).
-
-**Why it matters.** `plays` is user-visible: `Results.tsx:40` gates the "· best today N"
-line on `stats.plays > 1`, so a single run plus one refresh makes the app claim a second
-play that never happened. `bestScore` survives (it's a `Math.max` of the same value), so
-the damage is confined to the counter and the line it drives — but it is wrong, and it is
-wrong on the most ordinary user action there is.
-
-**Fix sketch.** Move the guard out of memory and into the persisted state: add a
-`recorded: boolean` to `GameState` (set in the `submit`/`finishGame` reducer branches or
-by the recording effect), and skip `recordRun` when it is already set. Keep the in-memory
-ref as a cheap short-circuit. Covered naturally by the PP-14 storage tests.
-
-### PP-2 · A malformed saved game bricks the app with no recovery path — M
-
-A saved game that doesn't match the current shape throws on load, white-screens the app,
-and is reloaded on every subsequent visit — so the game stays dead until the user manually
-clears site data.
-
-**Evidence.** `loadGame` (`src/game/storage.ts:98-118`) validates only the top level:
-array-ness of `piles`/`hands`/`selected`, `piles.length === PILE_COUNT`, and
-`typeof total === 'number'`. It never bounds-checks the indices inside `selected`, never
-validates the card objects inside piles, and never checks `status`. Two concrete throws:
-
-- An out-of-range **pile** index reaches `topCard(state.piles[i])` with `pile === undefined`
-  → `pile.length` throws (`src/game/deck.ts:44-46`, via `selectedCards`,
-  `src/game/reducer.ts:46-50`).
-- An out-of-range **held** index is worse. `state.held[i]` is `undefined`, and the guard
-  `.filter((c): c is Card => c !== null)` (`src/game/reducer.ts:49`) passes `undefined`
-  straight through — it only excludes `null`. `evaluateHand` then throws on `card.kind`
-  (`src/game/evaluator.ts:85-87`).
-
-Compounding it: `src/main.tsx` renders `<App/>` with no error boundary, so any throw during
-render is a blank page with no message and no reset control.
-
-**Why it matters.** No in-app path produces such a state today — the exposure is tampering,
-a partially-written save, or, far more likely, **any future change to the shape of
-`GameState`**. The hold-slots feature already changed that shape once and needed a hand-
-written migration (`src/game/storage.ts:113-116`) to avoid exactly this. The next such
-change ships a permanent white screen to every returning player, and the failure is
-self-perpetuating across reloads.
-
-**Fix sketch.** Two independent layers, both worth having:
-
-1. Validate `loadGame` deeply — card objects, `status`, and every `selected` index against
-   `piles.length` / `HOLD_SLOT_COUNT` — and return `null` (discard the save) on any failure.
-   Discarding a save is always recoverable; crashing is not.
-2. Add an error boundary in `src/main.tsx` whose fallback calls `clearGame()` and offers a
-   "start a fresh deal" button, so even an unanticipated throw is one tap from recovery.
-
-Fix `reducer.ts:49`'s unsound predicate as part of this (see PP-7).
+None open.
 
 ---
 
@@ -245,34 +222,15 @@ Dependabot (PP-18) keep them current.
 
 ## P2 — Testing and CI
 
-### PP-13 · CI never runs on pull requests — S
-
-**Evidence.** `.github/workflows/deploy.yml:3-6` triggers on `push: [main]` and
-`workflow_dispatch` only.
-
-**Why it matters.** Every PR in this repo merges without a single automated check. Tests run
-*after* the merge, as part of deploying — so the first signal that main is broken is a
-failed deploy. This is the cheapest fix in the backlog and the one that protects all the
-others; it belongs first.
-
-**Fix sketch.** Add `pull_request:` to the trigger with a job that runs `npm ci`,
-`npm test`, `npm run build`, and gate the Pages steps behind
-`if: github.event_name != 'pull_request'`. Or split CI and deploy into two workflows.
-
 ### PP-14 · `storage.ts` has zero tests — M
 
-**Evidence.** The test suite covers rng, deck, evaluator, reducer and share. There is no
-`storage.test.ts`.
-
-**Why it matters.** It is the only untested module and it holds both P0 bugs. Specifically
-untested: `loadGame`'s validation and rejection paths, the legacy-save migration, the
-quota/private-mode `catch` blocks, and `recordRun`'s accumulation across calls.
-
-**Fix sketch.** Tests against a fake `localStorage` (a `Map`-backed stub on `globalThis`,
-plus one that throws on `setItem` to exercise the Safari-private-mode path). Cover:
-round-trip save/load; rejection of a stale `dateKey`; rejection of every malformed shape;
-the numeric-`selected` migration; and `recordRun` incrementing `plays` exactly once per
-completed run (which is the regression test for PP-1).
+**Status: partially done.** `src/game/storage.test.ts` now exists, covering round-trip
+save/load, rejection of a stale `dateKey`, rejection of the malformed shapes deep validation
+now catches (bad card, out-of-range `selected` index, tampered hand score, unknown
+`status`, negative `total`), the numeric-`selected` migration, the `recorded` migration, the
+`setItem`/`getItem`-throws private-mode paths, and `recordRun` accumulating `plays` and
+`bestScore` across calls. What CLAUDE.md's untested-module note originally flagged is
+closed; PP-15's broader App-level integration coverage is still open.
 
 ### PP-15 · No component or integration tests — L
 
