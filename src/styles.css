@@ -22,8 +22,6 @@
 
   --card: #ffffff;
   --card-ink: #1e1b18;
-  --card-back: #e7ded0;
-  --card-back-line: #d5c8b3;
 
   --hairline: #e4dbcc;
   --hairline-strong: #cfc3af;
@@ -84,8 +82,6 @@
 
     --card: #26241f;
     --card-ink: #f3eee4;
-    --card-back: #1a1916;
-    --card-back-line: #302d26;
 
     --hairline: #35312a;
     --hairline-strong: #4a4238;
@@ -188,9 +184,9 @@ button {
   --cw: min(var(--cw-w), var(--cw-h), 9rem);
 
   --hold-cw: calc(var(--cw) * 0.6);
-  --stack-step: calc(var(--cw) * 0.04);
+  --stack-step: calc(var(--cw) * 0.05);
   --stack-taper: calc(var(--cw) * 0.008);
-  --stack-reserve: calc(6 * var(--stack-step));
+  --stack-reserve: calc(2 * var(--stack-step));
   --r-card: clamp(7px, calc(var(--cw) * 0.11), 16px);
 
   height: 100vh; /* Safari <= 15.3 */
@@ -342,7 +338,6 @@ button {
 }
 
 .pile {
-  position: relative; /* containing block for the count chip */
   --lift: 0px;
   width: var(--cw);
 }
@@ -369,7 +364,7 @@ button {
   outline-offset: 4px;
 }
 
-/* The reserve is a constant six steps whatever the real depth, so a pile of
+/* The reserve is a constant two steps whatever the real depth, so a pile of
    seven and a pile of one occupy identical boxes and the board never reflows
    as it drains. */
 .pile-stack {
@@ -383,7 +378,7 @@ button {
   perspective: 700px;
 }
 
-/* A zero-height frame: the backs size off its width and hang downward, so
+/* A zero-height frame: the edges size off its width and hang downward, so
    however many there are they contribute nothing to layout. */
 .pile-backs {
   position: absolute;
@@ -392,22 +387,18 @@ button {
   z-index: 1;
 }
 
+/* Depth reads as 0-2 bare hairline outlines peeking out behind and below the
+   face card, standing in for the exact buried count without spelling it out
+   as a number or a fully rendered card back. */
 .pile-backs i {
   position: absolute;
   left: calc(var(--i) * var(--stack-taper));
   right: calc(var(--i) * var(--stack-taper));
   top: calc((var(--i) + 1) * var(--stack-step));
   aspect-ratio: 5 / 7;
-  border: 1px solid var(--hairline);
+  border: 1.5px solid var(--hairline-strong);
   border-radius: var(--r-card);
-  background-color: var(--card-back);
-  background-image: repeating-linear-gradient(
-      45deg,
-      var(--card-back-line) 0 1px,
-      transparent 1px 6px
-    ),
-    repeating-linear-gradient(-45deg, var(--card-back-line) 0 1px, transparent 1px 6px);
-  box-shadow: 0 1px 1px rgba(30, 27, 24, 0.06);
+  background: none;
 }
 
 .pile-stack > .card {
@@ -437,37 +428,6 @@ button {
   border-color: var(--accent);
   border-style: dashed;
   box-shadow: var(--sh-card), 0 0 0 3px var(--accent-soft);
-}
-
-/* Small remaining-count chip, pinned to the pile box itself (not the lifting
-   card) so it holds its corner even while the top card lifts on selection.
-   It sits in the stack reserve below the face card — clear of the artwork, in
-   the bottom-right corner of the stack — which is why it is kept shorter than
-   `--stack-reserve` (0.24 * --cw). Shown on every pile, including a spent one,
-   where it simply reads "0". */
-.pile-count {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  z-index: 3;
-  min-width: 1.5em;
-  padding: 0.05em 0.34em;
-  border-radius: var(--r-chip);
-  border: 1px solid var(--hairline);
-  background: var(--surface-sunk);
-  box-shadow: var(--sh-card);
-  color: var(--ink-2);
-  font-size: calc(var(--cw) * 0.115);
-  font-weight: 800;
-  line-height: 1.25;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-  pointer-events: none;
-}
-
-.pile--spent .pile-count {
-  opacity: 0.5;
 }
 
 /* A drained pile becomes an extra hold pile in place, sized off --cw like its

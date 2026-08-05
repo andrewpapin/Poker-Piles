@@ -27,15 +27,18 @@ type Props = {
 };
 
 /**
- * The buried cards, drawn as offset card backs behind the face card. Each layer
- * is absolutely positioned inside a zero-height frame, so however many there
- * are they contribute nothing to layout — the pile's height comes from the face
- * card plus a constant reserve, and the board never reflows as piles drain.
+ * A subtle depth cue: 0-2 hairline-thin edges staggered behind and below the
+ * face card, standing in for the exact buried count rather than spelling it
+ * out. Each edge is absolutely positioned inside a zero-height frame, so
+ * however many there are they contribute nothing to layout — the pile's
+ * height comes from the face card plus a constant reserve, and the board
+ * never reflows as piles drain.
  */
-function StackBacks({ buried }: { buried: number }) {
+function StackEdges({ buried }: { buried: number }) {
+  const edgeCount = buried === 0 ? 0 : buried <= 3 ? 1 : 2;
   return (
     <span className="pile-backs" aria-hidden="true">
-      {Array.from({ length: buried }, (_, i) => (
+      {Array.from({ length: edgeCount }, (_, i) => (
         <i key={i} style={{ '--i': i } as CSSProperties} />
       ))}
     </span>
@@ -113,7 +116,6 @@ export function Pile({
         <span className="pile-stack">
           <span className="card card--ghost" />
         </span>
-        <span className="pile-count">0</span>
       </div>
     );
   }
@@ -135,12 +137,11 @@ export function Pile({
         }
       >
         <span className="pile-stack">
-          <StackBacks buried={Math.min(buried, PILE_SIZE - 1)} />
+          <StackEdges buried={Math.min(buried, PILE_SIZE - 1)} />
           {/* Keyed on the card so a newly revealed top card replays its flip. */}
           <CardFace key={card.id} card={card} />
         </span>
       </button>
-      <span className="pile-count" aria-hidden="true">{pile.length}</span>
     </div>
   );
 }
