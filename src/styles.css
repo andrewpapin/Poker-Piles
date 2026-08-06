@@ -1149,50 +1149,24 @@ button {
   color: var(--ink-2);
 }
 
-/* Today's average across everyone. Sits between the player's own numbers and
-   their hand breakdown, and is absent entirely when the network didn't answer
-   — the row must never reserve space it might not fill. */
+/* Today's average across everyone — a second meta line belonging to the score
+   block above, in the same tiny-caps voice as `.results-best`.
+   Deliberately unboxed: every other block on this page (summary chips, hand
+   rows) carries a background, and a background here would both indent its text
+   off the page's single left rail and add a third full-width slab between the
+   score and the breakdown. Absent entirely when the network didn't answer, so
+   it must never reserve space it might not fill. */
 .results-average {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.4rem;
-  margin: 0.7rem 0 0;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--r-chip);
-  background: var(--surface-sunk);
-  font-size: 0.68rem;
+  gap: 0 0.6rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--ink-2);
-}
-
-.results-average.is-pending {
-  color: var(--ink-3);
-}
-
-.results-average-label {
-  text-transform: uppercase;
-  font-size: 0.6rem;
   letter-spacing: 0.1em;
-}
-
-.results-average-value {
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-}
-
-.results-average-meta {
-  font-weight: 600;
-}
-
-/* Pushed to the far end so the player's standing reads as its own verdict
-   rather than as more of the sentence. */
-.results-average-delta {
-  margin-left: auto;
+  text-transform: uppercase;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
@@ -1200,11 +1174,20 @@ button {
 /* Deliberately not the tier ramp: those five colours mean "how good was that
    hand", and reusing them for "how did you do against everyone else" would
    make a run of yellow rows and a yellow verdict look related. */
-.results-average-delta[data-delta='up'] {
+.results-average-verdict[data-delta='up'] {
   color: var(--accent);
 }
 
-.results-average-delta[data-delta='down'] {
+.results-average-verdict[data-delta='down'],
+.results-average-verdict[data-delta='even'] {
+  color: var(--ink-2);
+}
+
+/* The two halves are told apart by weight of colour and the gap alone. A middot
+   between them reads well on one line but leads the second line as a bullet
+   once the line wraps — which it does at the narrow end of the landscape
+   layout — and there is no way to drop it only on wrap. */
+.results-average-meta {
   color: var(--ink-3);
 }
 

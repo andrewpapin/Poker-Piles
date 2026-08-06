@@ -30,6 +30,11 @@ function formatAverage(average: number): string {
  * best-effort — offline, blocked or first-of-the-day are all normal — so a
  * missing average is a quiet absence rather than an error the player has to
  * read past on their results page.
+ *
+ * The verdict leads and the numbers back it up, rather than the reverse: how
+ * the player did against everyone is what they came for, and putting it first
+ * also keeps the line one readable sentence instead of two fragments pushed to
+ * opposite margins.
  */
 function CommunityLine({
   total,
@@ -41,24 +46,24 @@ function CommunityLine({
   pending: boolean;
 }) {
   if (pending) {
-    return <p className="results-average is-pending">Checking today’s average…</p>;
+    return <p className="results-average">Checking today’s average…</p>;
   }
   if (!community) return null;
   if (community.plays <= 1) {
-    return <p className="results-average">First finish of the day — you set the average</p>;
+    return <p className="results-average">First finish today — you set the average</p>;
   }
 
   const delta = Math.round(total - community.average);
   return (
     <p className="results-average">
-      <span className="results-average-label">Average today</span>
-      <span className="results-average-value">{formatAverage(community.average)}</span>
-      <span className="results-average-meta">over {community.plays} players</span>
       <span
-        className="results-average-delta"
+        className="results-average-verdict"
         data-delta={delta === 0 ? 'even' : delta > 0 ? 'up' : 'down'}
       >
-        {delta === 0 ? 'dead on' : `${Math.abs(delta)} ${delta > 0 ? 'above' : 'below'}`}
+        {delta === 0 ? 'Dead on average' : `${Math.abs(delta)} ${delta > 0 ? 'above' : 'below'} average`}
+      </span>
+      <span className="results-average-meta">
+        {formatAverage(community.average)} across {community.plays} players
       </span>
     </p>
   );
