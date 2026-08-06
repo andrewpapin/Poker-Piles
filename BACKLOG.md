@@ -25,7 +25,7 @@ PP-7) have been fixed — see **Resolved** below.
 **Also resolved:** PP-3, PP-4 and PP-5 — the full P1 accessibility list (the rules-sheet dialog
 contract, hand-result announcements, spent-pile visibility) — PP-15, the component/
 integration test layer — PP-6, the UTC rollover prompt — and PP-8, PP-9, PP-11, PP-12, PP-17,
-PP-20, PP-21, PP-22 and PP-23 — see **Resolved** below.
+PP-19, PP-20, PP-21, PP-22 and PP-23 — see **Resolved** below.
 
 ---
 
@@ -287,6 +287,20 @@ owner's choice.
 **Value.** Makes clear to anyone who finds this on GitHub what they're actually allowed to do
 with the code — previously, by default copyright law, the honest answer was nothing.
 
+### PP-19 · No `og:image`
+
+`index.html` set Open Graph and Twitter card text but no image, so shared links rendered as
+bare text. A static `public/og-image.png` (1200×630, matching the Party theme — dark ground,
+the pink accent, drawn suit pips rather than Unicode glyphs, same as `CardFace.tsx`) is now
+referenced via `og:image`/`twitter:image` with an absolute URL (`og:image` isn't fetched under
+the page's own CSP, but several scrapers skip the fetch entirely for a relative path), plus
+`og:image:width`/`og:image:height` and `twitter:card` upgraded to `summary_large_image`. Vite's
+`public/` copy puts it at the deploy root unchanged, so the referenced URL resolves once built.
+
+**Value.** When you share your result link in a chat, it shows an inviting preview image
+instead of bare text — sharing is how the game spreads, and a bare-text link is easy to
+scroll past.
+
 ---
 
 ## P0 — Correctness bugs
@@ -382,17 +396,6 @@ outright).
 **Value.** Lets you add Poker Piles to your phone's home screen with an actual icon instead
 of a screenshot, and eventually open it with no signal — useful for a game meant to be a
 daily habit.
-
-### PP-19 · No `og:image` — S
-
-`index.html:29-42` sets Open Graph and Twitter card text but no image, so shared links render
-as bare text. Sharing is the app's growth mechanic (`share.ts` exists precisely to be pasted
-into a chat), which makes the missing preview image disproportionately costly. Add a static
-1200×630 card and reference it with an absolute URL.
-
-**Value.** When you share your result link in a chat, it shows an inviting preview image
-instead of bare text — sharing is how the game spreads, and a bare-text link is easy to
-scroll past.
 
 ---
 
