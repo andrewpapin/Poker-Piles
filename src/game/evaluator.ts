@@ -156,6 +156,10 @@ function cacheKey(cards: readonly Card[]): string {
     .join('|');
 }
 
+// Bounded FIFO (Map preserves insertion order) so a long-running session that
+// evaluates far more distinct hands than a normal game — a solver or batch
+// analysis, see PP-9 — can't grow this without limit.
+const CACHE_LIMIT = 5000;
 const cache = new Map<string, HandResult>();
 
 /**
@@ -181,5 +185,9 @@ export function evaluateHand(cards: readonly Card[]): HandResult {
   };
 
   cache.set(key, result);
+  if (cache.size > CACHE_LIMIT) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
   return result;
 }
