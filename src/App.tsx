@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { HoldSlots } from './components/HoldSlots';
 import { HowToPlay } from './components/HowToPlay';
 import { Results } from './components/Results';
+import { RolloverBanner } from './components/RolloverBanner';
 import { todayKey } from './game/rng';
 import {
   gameReducer,
@@ -33,6 +34,9 @@ import { submitRun } from './net/scores';
 import type { DailySummary } from './net/scores';
 
 const SAVE_DELAY_MS = 250;
+// Low-frequency by design (PP-6) — this only needs to catch a tab that has
+// been sitting open across UTC midnight, not react within seconds of it.
+const ROLLOVER_POLL_MS = 60_000;
 
 function bootstrap(): GameState {
   const dateKey = todayKey();
@@ -68,6 +72,42 @@ export default function App() {
   // rather than a boolean so a tab left open across midnight UTC publishes
   // again for the new puzzle.
   const submittedRef = useRef<string | null>(null);
+  // Set once a poll below notices `todayKey()` has moved past `state.dateKey`
+  // — i.e. this tab has been open (or backgrounded) across a UTC rollover and
+  // is still showing yesterday's deal.
+  const [rolloverDate, setRolloverDate] = useState<string | null>(null);
+  // Which date was last dismissed via the banner's "Not now", so the next
+  // poll tick doesn't immediately resurface the same one.
+  const rolloverDismissedRef = useRef<string | null>(null);
+
+  // PP-6: a tab left open across midnight UTC would otherwise keep playing
+  // yesterday's deal under yesterday's header date indefinitely — everyone
+  // else is on today's puzzle by then. Polled rather than driven off a timer
+  // set to fire at the exact rollover, since the tab may be asleep/throttled
+  // through it; a low-frequency interval plus a check on every foregrounding
+  // both converge on the truth within a minute either way. Never swaps the
+  // board out from under a run in progress on its own — see the banner below.
+  useEffect(() => {
+    rolloverDismissedRef.current = null;
+    const check = () => {
+      const key = todayKey();
+      setRolloverDate(key !== state.dateKey && key !== rolloverDismissedRef.current ? key : null);
+    };
+    check();
+    const interval = window.setInterval(check, ROLLOVER_POLL_MS);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [state.dateKey]);
+
+  const dismissRollover = useCallback(() => {
+    setRolloverDate((current) => {
+      rolloverDismissedRef.current = current;
+      return null;
+    });
+  }, []);
 
   // Debounced rather than fired on every tap (PP-21) — a burst of selection
   // toggles used to rewrite the whole 56-card board to localStorage once per
@@ -127,6 +167,13 @@ export default function App() {
   useEffect(() => {
     if (state.status !== 'complete' || submittedRef.current === state.dateKey) return;
     submittedRef.current = state.dateKey;
+    // The server stamps `date_key` from its own clock, not from this payload
+    // (see net/scores.ts) — so a run that finished under a date that has
+    // since rolled over would land in *today's* community average despite
+    // being played against a different day's deck. Skip it rather than post
+    // a score that isn't comparable; the results page just shows no average
+    // line, same as any other best-effort failure.
+    if (state.dateKey !== todayKey()) return;
     setCommunityPending(true);
     submitRun({ score: state.total, hands: state.hands.length, gaveUp: state.gaveUp }).then(
       (summary) => {
@@ -154,7 +201,15 @@ export default function App() {
     // A run in progress is one mis-tap away from the reset button — confirm before wiping it.
     const hasProgress =
       state.hands.length > 0 || state.selected.length > 0 || state.held.some((c) => c !== null);
-    if (hasProgress && !window.confirm("Restart today's puzzle? Your current run will be lost.")) {
+    // The header's Restart button and the rollover banner's "Play it" both
+    // land here — this is also what makes Restart do the right thing (rather
+    // than silently swapping in a different deal, see PP-6) when it's pressed
+    // after the puzzle has already rolled over to a new UTC date.
+    const isRollover = state.dateKey !== todayKey();
+    const confirmMessage = isRollover
+      ? "Today's puzzle has moved on since you started. Play the new one? Your current run will be lost."
+      : "Restart today's puzzle? Your current run will be lost.";
+    if (hasProgress && !window.confirm(confirmMessage)) {
       return;
     }
     clearGame();
@@ -165,7 +220,7 @@ export default function App() {
     submittedRef.current = null;
     setCommunity(null);
     dispatch({ type: 'newGame', dateKey: todayKey() });
-  }, [state.hands.length, state.selected.length, state.held]);
+  }, [state.dateKey, state.hands.length, state.selected.length, state.held]);
 
   const closeHelp = useCallback(() => {
     markHelpSeen();
@@ -260,6 +315,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="app-content" ref={appContentRef}>
+        {rolloverDate && <RolloverBanner onStart={handleNewGame} onDismiss={dismissRollover} />}
         <Header
           dateKey={state.dateKey}
           total={state.total}
