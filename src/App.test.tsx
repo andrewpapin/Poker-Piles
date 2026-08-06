@@ -16,6 +16,11 @@ function pileButtons() {
   return screen.getAllByRole('button', { name: PILE_LABEL });
 }
 
+/** Give up, How to play, Restart and the theme toggle all now live behind the hamburger. */
+function openMenu() {
+  fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+}
+
 /** Pulls the card label out of a live pile's aria-label, e.g. "Pile 1, King of clubs, 6 cards beneath". */
 function cardLabelOf(pileButton: HTMLElement): string {
   const label = pileButton.getAttribute('aria-label') ?? '';
@@ -45,6 +50,7 @@ describe('App', () => {
     expect(pileButtons()).toHaveLength(8);
     expect(screen.getByLabelText('Score 0')).toBeInTheDocument();
     expect(screen.getByText('0 hands played')).toBeInTheDocument();
+    openMenu();
     expect(screen.getByRole('button', { name: 'Give up' })).toBeInTheDocument();
   });
 
@@ -102,6 +108,7 @@ describe('App', () => {
     vi.mocked(submitRun).mockResolvedValue(summary);
 
     render(<App />);
+    openMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Give up' }));
 
     expect(screen.getByText('Gave up')).toBeInTheDocument();
@@ -117,11 +124,13 @@ describe('App', () => {
     expect(firstPile).toHaveAttribute('aria-pressed', 'true');
 
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    openMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
     expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(pileButtons()[0]).toHaveAttribute('aria-pressed', 'true');
 
     confirmSpy.mockReturnValue(true);
+    openMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
     expect(pileButtons().every((btn) => btn.getAttribute('aria-pressed') === 'false')).toBe(true);
   });
@@ -129,6 +138,7 @@ describe('App', () => {
   it('restarting a fresh game (no progress) never prompts for confirmation', () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     render(<App />);
+    openMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
     expect(confirmSpy).not.toHaveBeenCalled();
   });
@@ -142,6 +152,7 @@ describe('App', () => {
         <App />
       </StrictMode>,
     );
+    openMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Give up' }));
 
     await waitFor(() => expect(submitRun).toHaveBeenCalled());
@@ -179,9 +190,11 @@ describe('App', () => {
   it('toggles and persists the theme', () => {
     render(<App />);
     expect(document.documentElement.dataset.theme).toBe('light');
+    openMenu();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }));
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(window.localStorage.getItem('pokerpiles:v2:theme')).toBe('dark');
+    openMenu();
     expect(screen.getByRole('button', { name: 'Switch to party theme' })).toBeInTheDocument();
   });
 
@@ -232,6 +245,7 @@ describe('App', () => {
 
       vi.setSystemTime(new Date('2026-08-06T00:01:00Z'));
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      openMenu();
       fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
 
       expect(confirmSpy).toHaveBeenCalledWith(
@@ -246,6 +260,7 @@ describe('App', () => {
       render(<App />);
 
       vi.setSystemTime(new Date('2026-08-06T00:01:00Z'));
+      openMenu();
       fireEvent.click(screen.getByRole('button', { name: 'Give up' }));
 
       expect(screen.getByText('Gave up')).toBeInTheDocument();

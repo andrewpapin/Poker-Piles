@@ -10,3 +10,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Stamped in at build time by vite.config.ts from the latest
+// "Merge pull request #N" commit on main — see the header menu's version line.
+declare const __RELEASE_VERSION__: string;
