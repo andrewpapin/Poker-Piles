@@ -23,8 +23,9 @@ and PR titles. Sizes are rough: **S** ≈ under an hour, **M** ≈ half a day, *
 PP-7) have been fixed — see **Resolved** below.
 
 **Also resolved:** PP-3, PP-4 and PP-5 — the full P1 accessibility list (the rules-sheet dialog
-contract, hand-result announcements, spent-pile visibility) — and PP-15, the component/
-integration test layer — see **Resolved** below.
+contract, hand-result announcements, spent-pile visibility) — PP-15, the component/
+integration test layer — and PP-8, PP-9, PP-11, PP-12, PP-17, PP-20, PP-21 and PP-23 — see
+**Resolved** below.
 
 ---
 
@@ -148,6 +149,115 @@ before it ever reaches a player. It also turns two things that were previously v
 hand (the PP-3 dialog contract, the StrictMode double-invoke guards) into something CI checks
 on every change.
 
+### PP-8 · Storage schema has no version discriminator
+
+`src/game/storage.ts` now writes an explicit `version` field into the `GAME_KEY` payload
+(`GAME_VERSION`, currently `1`), independent of the `v2` key prefix — which versions when a
+*score* stops being comparable, not when the save's *shape* changes. `loadGame` discards a
+save whose `version` doesn't match (a future build's shape this one doesn't know how to read)
+rather than guessing; a save with no `version` field predates the discriminator and still runs
+through the existing shape-sniffing migrations (numeric `selected`, missing `held`/
+`pileHoldIndex`/`recorded`). Covered by the existing round-trip test in `storage.test.ts`,
+which pins that a fresh save still loads back byte-for-byte.
+
+**Value.** The next time the saved-game shape changes, an old save either migrates cleanly or
+is discarded outright — it can no longer reach the reducer half-shaped from a future version
+this build has never seen.
+
+### PP-9 · Evaluator memo cache never evicts
+
+`src/game/evaluator.ts`'s module-level cache is now bounded (`CACHE_LIMIT = 5000`) with simple
+FIFO eviction — `Map` preserves insertion order, so the oldest entry is dropped once the cache
+grows past the limit. A normal session never gets close to it; this only matters if the
+evaluator is ever driven by a solver or batch analysis.
+
+**Value.** Closes off the only unbounded-growth path in the game logic, at no cost to normal
+play — a session's actual hand count stays far under the cap.
+
+### PP-11 · No Content-Security-Policy
+
+`index.html` now sets a restrictive `<meta http-equiv="Content-Security-Policy">` (the only
+lever available — GitHub Pages serves static files with no response headers to set):
+`default-src 'self'`, `img-src 'self' data:` (the favicon and manifest icon are inline data
+URIs), `connect-src 'self' https://*.supabase.co` (score collection), `base-uri 'none'`,
+`form-action 'none'`. Two directives needed a closer look rather than the plain `'self'` the
+original fix sketch proposed: `style-src` carries `'unsafe-inline'` because `HandBar`'s tier
+meter sets a CSS custom property via React's `style` prop, and `script-src` allow-lists the
+inline theme-bootstrap script in `index.html` by exact SHA-256 hash rather than reaching for
+`'unsafe-inline'` there too. Verified against the actual built bundle (not the dev server) with
+a scripted headless-Chromium session listening for `securitypolicyviolation` events while
+exercising pile selection, the How to play sheet and the theme toggle — zero violations.
+
+**Value.** If a future change ever accidentally introduced a way to inject a script, the
+browser now simply refuses to run it instead of it becoming a real vulnerability for players.
+
+### PP-12 · Deploy workflow pins actions by major tag
+
+Every `uses:` step in `.github/workflows/deploy.yml` and `.github/workflows/ci.yml` is now
+pinned to a full commit SHA within its current major version, with the version in a trailing
+comment (e.g. `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0`) — resolved
+directly from each action's tags rather than assumed. Dependabot (PP-17) will keep these
+current, opening a PR that bumps both the SHA and the comment.
+
+**Value.** A compromised or unexpectedly-changed GitHub Action can no longer silently run
+during deployment just because it still answers to the same version tag.
+
+### PP-17 · No Dependabot or CodeQL
+
+`.github/dependabot.yml` now watches both `npm` and `github-actions` weekly. A new
+`.github/workflows/codeql.yml` runs GitHub's default CodeQL analysis for
+`javascript-typescript` on push to `main`, on every pull request, and weekly on a schedule (to
+catch newly-published advisories against code that hasn't changed) — its own `actions/checkout`
+and `github/codeql-action/*` steps are SHA-pinned the same way as PP-12.
+
+**Value.** Known vulnerabilities in a dependency, or a simple code-scanning finding, now
+surface automatically on a weekly cadence instead of only at the next manual audit.
+
+### PP-20 · Webfont isn't preloaded
+
+`index.html` now carries a `<link rel="preload" as="font" type="font/woff2" crossorigin>`
+pointing at `/src/fonts/outfit-latin.woff2`; Vite rewrites it at build time to the same hashed
+asset URL the CSS bundle already emits for `@font-face`, so there's exactly one copy of the
+file, fetched once, and discovered before the stylesheet's `@font-face` rule would otherwise
+be the first thing to request it.
+
+**Value.** The title and card text no longer flash from a fallback font to the real one on
+first load — a small but visible polish on the very first impression of the page.
+
+### PP-21 · Every selection toggle rewrites the whole board to localStorage
+
+The `saveGame` effect in `App.tsx` is now debounced (`SAVE_DELAY_MS = 250`) instead of firing
+on every state change, so a burst of taps writes the board once rather than once per tap.
+Flushed immediately on `visibilitychange` (to `hidden`) and `pagehide` as well as the debounce
+timer, so a tab closed mid-burst still persists its last state rather than losing whatever
+hadn't reached the 250ms trailing edge yet.
+
+**Value.** Not noticeable to players today; avoids doing pointless work on every single tap so
+the game stays snappy if it's ever run on a slower or older device, without weakening the
+"a backgrounded tab doesn't lose its run" guarantee the debounce could otherwise have cost.
+
+### PP-23 · `CLAUDE.md` has drifted from the code
+
+Re-audited against the current file and found already accurate on all three points this item
+originally raised: `share.ts`'s description matches `buildShareText`'s actual spoiler-free
+output (title, score, link — no tier grid), the hold-slot mechanic and `HOLD_SLOT_COUNT` are
+documented in both the architecture table and the invariants section, and the `GameAction`
+surface is listed correctly as all eight current variants. The drift this item described was
+fixed as a side effect of other work (the hold-slot and `markRecorded` features being
+documented as they were built) without ever citing PP-23. No changes needed; recorded here so
+the item isn't re-flagged by a future audit working from a stale copy of this list.
+
+**Value.** Confirms the steering document future work relies on is accurate, without spending
+effort re-fixing something already fixed.
+
+### PP-22 · No LICENSE file
+
+Added a root `LICENSE` (MIT) and a `"license": "MIT"` field in `package.json`, per the repo
+owner's choice.
+
+**Value.** Makes clear to anyone who finds this on GitHub what they're actually allowed to do
+with the code — previously, by default copyright law, the honest answer was nothing.
+
 ---
 
 ## P0 — Correctness bugs
@@ -183,39 +293,6 @@ as it does to everyone else playing the shared daily deal.
 when it differs from `state.dateKey`, surface a "new puzzle available" prompt rather than
 yanking the board mid-run.
 
-### PP-8 · Storage schema has no version discriminator — S
-
-**Evidence.** `src/game/storage.ts:10-12` pins `:v1:` into the key names, but the hold-slots
-feature changed `GameState` without bumping it — handled instead by an inline migration
-(`src/game/storage.ts:113-116`) that infers "old save" from a missing `held` field and a
-`selected` array of raw numbers.
-
-**Why it matters.** Shape-sniffing works once. It doesn't compose: the second and third
-migrations have to distinguish schema versions from each other, not just from "current".
-
-**Value.** Makes future updates to the saved-game format safe to ship — protects your
-in-progress game from ever loading in a broken, half-migrated state the next time the app
-changes.
-
-**Fix sketch.** Store an explicit `version` field inside the payload, migrate known older
-versions, discard anything unrecognised. Pairs naturally with PP-2's deep validation.
-
-### PP-9 · Evaluator memo cache never evicts — S
-
-**Evidence.** `src/game/evaluator.ts:157` is a module-level `Map` with no bound, shared
-across `newGame`.
-
-**Why it matters.** Bounded in practice by the number of distinct hands a session actually
-plays, so this is a note rather than a leak — recorded so it isn't re-discovered. It only
-becomes real if the evaluator is ever driven by a solver or a batch analysis.
-
-**Value.** No effect on normal play — a session never evaluates enough distinct hands to
-notice. Recorded so a future contributor doesn't waste time "discovering" and re-flagging
-the same non-issue.
-
-**Fix sketch.** Cap it (simple FIFO eviction past N entries), or leave it and delete this
-item deliberately.
-
 ---
 
 ## P2 — Security
@@ -242,38 +319,6 @@ protects a developer's own machine while they're running the dev server locally.
 **Fix sketch.** Fold into a single dependency-refresh pass — Vite 5 → 7, Vitest 2 → 3,
 React 18 → 19 — each with its own migration notes, done deliberately rather than in one
 sweep. Run `npm audit` afterwards and record the result.
-
-### PP-11 · No Content-Security-Policy — S
-
-**Evidence.** `index.html` sets no CSP, and GitHub Pages cannot set response headers, so a
-`<meta http-equiv="Content-Security-Policy">` is the only available lever.
-
-**Why it matters.** Low value today given there is no dynamic content — but it is nearly
-free and forecloses a whole class of future mistakes.
-
-**Value.** An almost-free safety net: if a future change ever accidentally introduced a way
-to inject a script, the browser would simply refuse to run it instead of it becoming a real
-vulnerability for players.
-
-**Fix sketch.** A restrictive meta CSP: `default-src 'self'`, `img-src 'self' data:` (the
-favicon is a data URI), `style-src 'self'`, `script-src 'self'`. Verify against the built
-bundle, not just the dev server, since Vite's dev transform differs.
-
-### PP-12 · Deploy workflow pins actions by major tag — S
-
-**Evidence.** `.github/workflows/deploy.yml:22-43` uses `actions/checkout@v4`,
-`actions/setup-node@v4`, `actions/configure-pages@v5`, `actions/upload-pages-artifact@v3`,
-`actions/deploy-pages@v4`.
-
-**Why it matters.** A mutable tag means the workflow runs whatever that tag points at today.
-The workflow's `permissions` block is already correctly minimized (`contents: read`,
-`pages: write`, `id-token: write`), so this is the remaining supply-chain gap.
-
-**Value.** Stops a compromised or unexpectedly-changed GitHub Action from silently running
-during deployment — protects the pipeline that publishes the game, not the game itself.
-
-**Fix sketch.** Pin to full commit SHAs with the version in a trailing comment, and let
-Dependabot (PP-17) keep them current.
 
 ---
 
@@ -309,17 +354,6 @@ audit to rediscover them.
 **Fix sketch.** ESLint flat config with `typescript-eslint`, `react-hooks` and `jsx-a11y`,
 wired into the PP-13 CI job and exposed as `npm run lint`.
 
-### PP-17 · No Dependabot or CodeQL — S
-
-**Evidence.** `.github/` contains only `workflows/deploy.yml`.
-
-**Value.** Surfaces known security vulnerabilities in dependencies and simple code-scanning
-findings automatically, instead of only finding them the next time someone happens to run a
-manual audit.
-
-**Fix sketch.** `.github/dependabot.yml` for `npm` and `github-actions` (weekly), and
-GitHub's default CodeQL setup for JavaScript/TypeScript.
-
 ---
 
 ## P3 — Polish, PWA, hygiene
@@ -347,49 +381,6 @@ into a chat), which makes the missing preview image disproportionately costly. A
 **Value.** When you share your result link in a chat, it shows an inviting preview image
 instead of bare text — sharing is how the game spreads, and a bare-text link is easy to
 scroll past.
-
-### PP-20 · Webfont isn't preloaded — S
-
-`styles.css:8-14` declares `@font-face` with `font-display: swap`, and the font is only
-discovered after the CSS parses — guaranteeing a flash of fallback text on first paint. Add
-`<link rel="preload" as="font" type="font/woff2" crossorigin>` for
-`src/fonts/outfit-latin.woff2` (via the Vite-emitted hashed URL).
-
-**Value.** The title and card text no longer flash from a fallback font to the real one on
-first load — a small but visible polish on the very first impression of the page.
-
-### PP-21 · Every selection toggle rewrites the whole board to localStorage — S
-
-`src/App.tsx:47-49` runs `saveGame(state)` on every state change, serializing all 56 cards
-just to record that a card was tapped. Negligible in absolute terms; avoidable by persisting
-on meaningful transitions (submit, hold, finish, new game) or debouncing the effect.
-
-**Value.** Not noticeable to players today; avoids doing pointless work on every single tap
-so the game stays snappy if it's ever run on a slower or older device.
-
-### PP-22 · No LICENSE file — S
-
-The repo is public with no license, which by default means no one may use, copy or modify it.
-Add one if that isn't the intent.
-
-**Value.** Makes clear to anyone who finds this on GitHub what they're actually allowed to do
-with the code — right now, by default copyright law, the honest answer is nothing.
-
-### PP-23 · `CLAUDE.md` has drifted from the code — S
-
-Three concrete mismatches, in the file whose entire job is steering future work:
-
-- It describes `share.ts` as producing "a block grid of per-hand tiers"; `buildShareText`
-  (`src/game/share.ts:18-22`) emits only a title line, a score line and the URL. The tier
-  grid is gone.
-- The hold-slot mechanic and `HOLD_SLOT_COUNT` are absent from both the architecture table
-  and the invariants section, despite being central to play.
-- The documented `GameAction` surface lists four variants (`toggle`, `clear`, `submit`,
-  `newGame`); there are now seven — `toggleHeld`, `hold` and `finishGame` are missing.
-
-**Value.** Keeps the steering document that future work (including Claude's own sessions)
-relies on accurate, so the next change is guided by what the code actually does instead of
-stale claims — a wrong doc here costs everyone who reads it next, not just whoever wrote it.
 
 ---
 
