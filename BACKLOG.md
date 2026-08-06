@@ -35,6 +35,9 @@ Added `.github/workflows/ci.yml`, triggered on `pull_request` against `main`, ru
 `npm ci`, `npm test`, `npm run build`. `deploy.yml` is untouched and still tests before
 deploying, so main keeps a second safety net.
 
+**Value.** Catches a broken change before it reaches the live site, rather than after players
+are already looking at it.
+
 ### PP-1 · Refreshing the results screen inflates the play count
 
 `GameState` gained a persisted `recorded: boolean` field (`src/game/reducer.ts`), set via a
@@ -44,6 +47,9 @@ run no longer re-triggers `recordRun`. The in-memory `recordedRef` check stays a
 as a same-session short-circuit. `loadGame` defaults `recorded` to `false` for saves that
 predate this field. Covered by `src/game/storage.test.ts` and a `markRecorded` case in
 `reducer.test.ts`.
+
+**Value.** Your stats stay honest — reloading the results page after finishing a run no
+longer secretly counts as an extra game played.
 
 ### PP-2 · A malformed saved game bricks the app with no recovery path
 
@@ -56,11 +62,18 @@ reducer/evaluator a shape that throws. `src/main.tsx` also wraps `<App/>` in a n
 save and reloads — a backstop for whatever the deep validation doesn't anticipate. Covered
 by `src/game/storage.test.ts`.
 
+**Value.** If your saved game ever gets corrupted (a browser quirk, an interrupted save),
+you get a "start a fresh deal" button instead of a blank, broken page with no way out short
+of manually clearing site data.
+
 ### PP-7 · `selectedCards`'s type guard is unsound
 
 Fixed as part of PP-2: `src/game/reducer.ts`'s `selectedCards` now filters with
 `c != null` instead of `c !== null`, so a stray `undefined` held-slot entry can no longer
 slip through and reach the evaluator.
+
+**Value.** Closes off a rare crash-in-waiting where an empty hold slot could confuse the
+scoring engine and hand you a wrong result for a hand you played.
 
 ### PP-3 · The rules sheet claims `aria-modal` but implements none of the contract
 
@@ -75,11 +88,19 @@ that `HowToPlay` marks `inert` for as long as it's mounted, so the claim in `ari
 is now actually true — verified with a scripted Chromium session exercising focus-on-open,
 Tab-trapping, Escape-to-close, `inert` toggling, and focus restoration on close.
 
+**Value.** Screen-reader and keyboard-only players can actually use the "How to play" sheet
+— tab through it, close it with Escape, and not get trapped behind it or lose their place
+on the board underneath.
+
 ### PP-4 · Playing a hand is never announced
 
 `App.tsx` now renders a visually-hidden (`.sr-only`) `role="status" aria-live="polite"` region
 alongside the existing (still `aria-hidden`) toast, textually echoing the same content each time
 a hand is played — e.g. "Two Pair, 10 points — total 85". The visible toast is unchanged.
+
+**Value.** Screen-reader players hear what hand they just played and how many points it
+scored, instead of silence after every move — previously the only feedback was a toast they
+couldn't perceive.
 
 ### PP-5 · Spent piles are hidden from assistive tech
 
@@ -92,6 +113,9 @@ in the same reducer step, and the finished screen replaces the whole play area w
 rather than continuing to render `Board`. Fixed anyway since it's the correct markup regardless
 and costs nothing; flagged here rather than deleting the branch, which is out of scope for this
 pass.
+
+**Value.** Screen-reader players are told which piles ran dry, instead of the board going
+silently blank where a pile used to be.
 
 ---
 
@@ -119,20 +143,14 @@ Meanwhile the "Restart" button calls `todayKey()` fresh (`src/App.tsx:81`), so i
 swaps in a completely different deal — the same button does two different things depending
 on the clock. Mobile users background tabs for days; this is not an edge case.
 
+**Value.** If you leave the tab open past midnight UTC, you can keep playing "today's"
+puzzle without realizing it's actually yesterday's, and your finished run could get filed
+under the wrong day. A rollover prompt keeps "today's puzzle" meaning the same thing to you
+as it does to everyone else playing the shared daily deal.
+
 **Fix sketch.** Poll `todayKey()` on `visibilitychange` (and on a low-frequency interval);
 when it differs from `state.dateKey`, surface a "new puzzle available" prompt rather than
 yanking the board mid-run.
-
-### PP-7 · `selectedCards`'s type guard is unsound — S
-
-**Evidence.** `src/game/reducer.ts:49` narrows with `(c): c is Card => c !== null`, which
-admits `undefined`. The array is typed `Card[]` but can hold `undefined` at runtime.
-
-**Why it matters.** It is the mechanism behind half of PP-2, and it is simply the wrong
-predicate — `c != null` is the correct one. Worth fixing independently of PP-2 so the type
-system stops lying about this array.
-
-**Fix sketch.** `(c): c is Card => c != null`.
 
 ### PP-8 · Storage schema has no version discriminator — S
 
@@ -143,6 +161,10 @@ feature changed `GameState` without bumping it — handled instead by an inline 
 
 **Why it matters.** Shape-sniffing works once. It doesn't compose: the second and third
 migrations have to distinguish schema versions from each other, not just from "current".
+
+**Value.** Makes future updates to the saved-game format safe to ship — protects your
+in-progress game from ever loading in a broken, half-migrated state the next time the app
+changes.
 
 **Fix sketch.** Store an explicit `version` field inside the payload, migrate known older
 versions, discard anything unrecognised. Pairs naturally with PP-2's deep validation.
@@ -155,6 +177,10 @@ across `newGame`.
 **Why it matters.** Bounded in practice by the number of distinct hands a session actually
 plays, so this is a note rather than a leak — recorded so it isn't re-discovered. It only
 becomes real if the evaluator is ever driven by a solver or a batch analysis.
+
+**Value.** No effect on normal play — a session never evaluates enough distinct hands to
+notice. Recorded so a future contributor doesn't waste time "discovering" and re-flagging
+the same non-issue.
 
 **Fix sketch.** Cap it (simple FIFO eviction past N entries), or leave it and delete this
 item deliberately.
@@ -179,6 +205,9 @@ the developer visits read responses from a running `npm run dev`.
 and is absent from the production bundle, so the deployed site is unaffected. It only fixes
 forward: esbuild ≥ 0.25 requires Vite 6+.
 
+**Value.** No effect on players — the site you actually visit is unaffected either way. Only
+protects a developer's own machine while they're running the dev server locally.
+
 **Fix sketch.** Fold into a single dependency-refresh pass — Vite 5 → 7, Vitest 2 → 3,
 React 18 → 19 — each with its own migration notes, done deliberately rather than in one
 sweep. Run `npm audit` afterwards and record the result.
@@ -190,6 +219,10 @@ sweep. Run `npm audit` afterwards and record the result.
 
 **Why it matters.** Low value today given there is no dynamic content — but it is nearly
 free and forecloses a whole class of future mistakes.
+
+**Value.** An almost-free safety net: if a future change ever accidentally introduced a way
+to inject a script, the browser would simply refuse to run it instead of it becoming a real
+vulnerability for players.
 
 **Fix sketch.** A restrictive meta CSP: `default-src 'self'`, `img-src 'self' data:` (the
 favicon is a data URI), `style-src 'self'`, `script-src 'self'`. Verify against the built
@@ -205,8 +238,11 @@ bundle, not just the dev server, since Vite's dev transform differs.
 The workflow's `permissions` block is already correctly minimized (`contents: read`,
 `pages: write`, `id-token: write`), so this is the remaining supply-chain gap.
 
+**Value.** Stops a compromised or unexpectedly-changed GitHub Action from silently running
+during deployment — protects the pipeline that publishes the game, not the game itself.
+
 **Fix sketch.** Pin to full commit SHAs with the version in a trailing comment, and let
-Dependabot (PP-18) keep them current.
+Dependabot (PP-17) keep them current.
 
 ---
 
@@ -222,6 +258,9 @@ now catches (bad card, out-of-range `selected` index, tampered hand score, unkno
 `bestScore` across calls. What CLAUDE.md's untested-module note originally flagged is
 closed; PP-15's broader App-level integration coverage is still open.
 
+**Value.** Gives confidence that a future code change can't quietly corrupt your saved game
+or your stats without a test catching it first.
+
 ### PP-15 · No component or integration tests — L
 
 **Evidence.** No jsdom environment is configured (`vite.config.ts` has no `test` block) and
@@ -231,6 +270,10 @@ closed; PP-15's broader App-level integration coverage is still open.
 `App.tsx` — hold-slot arming in both tap orders, the toast lifecycle and its timer cleanup,
 the `complete` → `Results` transition, the confirm-guarded restart. That wiring is where the
 recent features actually live.
+
+**Value.** Catches regressions in the actual on-screen experience — holding a card, seeing
+the results page, restarting a run — the kind of bug you'd only notice by clicking around,
+before it ever reaches a player.
 
 **Fix sketch.** Add `jsdom` + `@testing-library/react` and a `test: { environment: 'jsdom' }`
 block in `vite.config.ts`, then cover the handful of App-level flows above. Keep the pure
@@ -246,12 +289,20 @@ violations, and `eslint-plugin-jsx-a11y` would have flagged PP-3 through PP-5 au
 which is the argument for adding it: these classes of bug recur, and a linter catches them
 for free on every future change.
 
+**Value.** Catches whole classes of accessibility and React bugs — the exact kind PP-3
+through PP-5 were — automatically on every change, instead of relying on another manual
+audit to rediscover them.
+
 **Fix sketch.** ESLint flat config with `typescript-eslint`, `react-hooks` and `jsx-a11y`,
 wired into the PP-13 CI job and exposed as `npm run lint`.
 
 ### PP-17 · No Dependabot or CodeQL — S
 
 **Evidence.** `.github/` contains only `workflows/deploy.yml`.
+
+**Value.** Surfaces known security vulnerabilities in dependencies and simple code-scanning
+findings automatically, instead of only finding them the next time someone happens to run a
+manual audit.
 
 **Fix sketch.** `.github/dependabot.yml` for `npm` and `github-actions` (weekly), and
 GitHub's default CodeQL setup for JavaScript/TypeScript.
@@ -269,12 +320,20 @@ is entirely client-side still cannot be played offline. Add PNG icons, an `apple
 and consider a minimal precaching service worker (the whole bundle is small enough to cache
 outright).
 
+**Value.** Lets you add Poker Piles to your phone's home screen with an actual icon instead
+of a screenshot, and eventually open it with no signal — useful for a game meant to be a
+daily habit.
+
 ### PP-19 · No `og:image` — S
 
 `index.html:29-42` sets Open Graph and Twitter card text but no image, so shared links render
 as bare text. Sharing is the app's growth mechanic (`share.ts` exists precisely to be pasted
 into a chat), which makes the missing preview image disproportionately costly. Add a static
 1200×630 card and reference it with an absolute URL.
+
+**Value.** When you share your result link in a chat, it shows an inviting preview image
+instead of bare text — sharing is how the game spreads, and a bare-text link is easy to
+scroll past.
 
 ### PP-20 · Webfont isn't preloaded — S
 
@@ -283,16 +342,25 @@ discovered after the CSS parses — guaranteeing a flash of fallback text on fir
 `<link rel="preload" as="font" type="font/woff2" crossorigin>` for
 `src/fonts/outfit-latin.woff2` (via the Vite-emitted hashed URL).
 
+**Value.** The title and card text no longer flash from a fallback font to the real one on
+first load — a small but visible polish on the very first impression of the page.
+
 ### PP-21 · Every selection toggle rewrites the whole board to localStorage — S
 
 `src/App.tsx:47-49` runs `saveGame(state)` on every state change, serializing all 56 cards
 just to record that a card was tapped. Negligible in absolute terms; avoidable by persisting
 on meaningful transitions (submit, hold, finish, new game) or debouncing the effect.
 
+**Value.** Not noticeable to players today; avoids doing pointless work on every single tap
+so the game stays snappy if it's ever run on a slower or older device.
+
 ### PP-22 · No LICENSE file — S
 
 The repo is public with no license, which by default means no one may use, copy or modify it.
 Add one if that isn't the intent.
+
+**Value.** Makes clear to anyone who finds this on GitHub what they're actually allowed to do
+with the code — right now, by default copyright law, the honest answer is nothing.
 
 ### PP-23 · `CLAUDE.md` has drifted from the code — S
 
@@ -305,6 +373,10 @@ Three concrete mismatches, in the file whose entire job is steering future work:
   and the invariants section, despite being central to play.
 - The documented `GameAction` surface lists four variants (`toggle`, `clear`, `submit`,
   `newGame`); there are now seven — `toggleHeld`, `hold` and `finishGame` are missing.
+
+**Value.** Keeps the steering document that future work (including Claude's own sessions)
+relies on accurate, so the next change is guided by what the code actually does instead of
+stale claims — a wrong doc here costs everyone who reads it next, not just whoever wrote it.
 
 ---
 
