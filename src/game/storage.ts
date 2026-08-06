@@ -17,6 +17,19 @@ import type { GameState, SelectionEntry } from './reducer';
 const STATS_KEY = 'pokerpiles:v2:stats';
 const GAME_KEY = 'pokerpiles:v2:game';
 const HELP_KEY = 'pokerpiles:v2:seenHelp';
+
+/**
+ * Explicit schema version for the payload stored under `GAME_KEY`, independent
+ * of the `v2` key prefix above (see PP-8). The prefix is bumped only when a
+ * *score* stops being comparable; this versions the save's *shape*, which has
+ * already changed twice since `v2` shipped (hold slots, then `recorded`)
+ * without either bump, relying on shape-sniffing (a missing `held` field, a
+ * numeric `selected` entry) to tell old saves from new. That approach doesn't
+ * compose past one migration. A save with no `version` field predates this
+ * and is still migrated the old way; a `version` that doesn't match a known
+ * shape is discarded outright rather than guessed at.
+ */
+const GAME_VERSION = 1;
 // Keep this key literal in sync with the inline bootstrap script in index.html,
 // which reads it before React (and this module) ever loads, to paint the right
 // theme on first frame instead of flashing the wrong one then swapping.
@@ -175,7 +188,7 @@ export function saveTheme(theme: Theme): void {
 }
 
 export function saveGame(state: GameState): void {
-  writeJson(GAME_KEY, state);
+  writeJson(GAME_KEY, { ...state, version: GAME_VERSION });
 }
 
 export function clearGame(): void {
@@ -198,6 +211,10 @@ export function clearGame(): void {
 export function loadGame(dateKey: string): GameState | null {
   const stored = readJson<Record<string, unknown>>(GAME_KEY);
   if (!stored || stored.dateKey !== dateKey) return null;
+  // No `version` field: a save from before this discriminator existed, still
+  // handled by the shape-sniffing migrations below. Any other value is a
+  // shape this build doesn't know how to read — discard rather than guess.
+  if (stored.version !== undefined && stored.version !== GAME_VERSION) return null;
 
   if (!Array.isArray(stored.piles) || stored.piles.length !== PILE_COUNT || !stored.piles.every(isValidPile)) {
     return null;

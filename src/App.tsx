@@ -32,6 +32,8 @@ import type { DailyStats, Theme } from './game/storage';
 import { submitRun } from './net/scores';
 import type { DailySummary } from './net/scores';
 
+const SAVE_DELAY_MS = 250;
+
 function bootstrap(): GameState {
   const dateKey = todayKey();
   // Silently pick up an interrupted run so a backgrounded tab does not lose it.
@@ -67,8 +69,23 @@ export default function App() {
   // again for the new puzzle.
   const submittedRef = useRef<string | null>(null);
 
+  // Debounced rather than fired on every tap (PP-21) — a burst of selection
+  // toggles used to rewrite the whole 56-card board to localStorage once per
+  // tap. Flushed immediately on backgrounding so a tab closed mid-burst still
+  // persists its last state rather than losing up to SAVE_DELAY_MS of it.
   useEffect(() => {
-    saveGame(state);
+    const flush = () => saveGame(state);
+    const timer = window.setTimeout(flush, SAVE_DELAY_MS);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', flush);
+    };
   }, [state]);
 
   useEffect(() => {

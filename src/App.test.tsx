@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import { todayKey } from './game/rng';
-import { loadStats, markHelpSeen } from './game/storage';
+import { loadGame, loadStats, markHelpSeen } from './game/storage';
 import { submitRun } from './net/scores';
 import type { DailySummary } from './net/scores';
 
@@ -147,6 +147,33 @@ describe('App', () => {
     await waitFor(() => expect(submitRun).toHaveBeenCalled());
     expect(submitRun).toHaveBeenCalledTimes(1);
     expect(loadStats(dateKey).plays).toBe(1);
+  });
+
+  it('debounces the save to localStorage rather than writing on every tap', async () => {
+    render(<App />);
+    const [firstPile] = pileButtons();
+
+    fireEvent.click(firstPile);
+    // Immediately after the tap, the debounce hasn't elapsed yet, so nothing
+    // has been written for today's puzzle at all.
+    expect(loadGame(dateKey)).toBeNull();
+
+    await waitFor(() => expect(loadGame(dateKey)?.selected).toEqual([{ origin: 'pile', index: 0 }]));
+  });
+
+  it('flushes a pending save immediately when the tab is hidden', () => {
+    render(<App />);
+    const [firstPile] = pileButtons();
+    fireEvent.click(firstPile);
+    expect(loadGame(dateKey)).toBeNull();
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    try {
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(loadGame(dateKey)?.selected).toEqual([{ origin: 'pile', index: 0 }]);
+    } finally {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    }
   });
 
   it('toggles and persists the theme', () => {

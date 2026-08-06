@@ -75,7 +75,7 @@ directly to preview the live selection; it reads the evaluator, it does not re-i
 | --- | --- |
 | `rng.ts` | `xmur3` string hash + `mulberry32` PRNG; also `todayKey()`, the UTC date string that seeds everything |
 | `deck.ts` | `buildDeck()` (canonical 56-card deck), `shuffle()` (Fisher-Yates), `dealPiles(dateKey)`, `topCard()` — the whole deal is a pure function of the date |
-| `evaluator.ts` | `evaluateHand()`: hand categorization and optimal wild-card resolution, memoized via a cache keyed on sorted card identities |
+| `evaluator.ts` | `evaluateHand()`: hand categorization and optimal wild-card resolution, memoized via a bounded (`CACHE_LIMIT`, FIFO-evicted) cache keyed on sorted card identities |
 | `reducer.ts` | `gameReducer`/`GameState`/`GameAction`, plus the derived selectors (`selectedCards`, `selectedPileIndices`, `selectedHeldIndices`, `heldCount`, `openHoldSlot`, `cardsRemaining`, `livePileCount`) |
 | `share.ts` | `formatPuzzleDate()` and `buildShareText()` (spoiler-free: title, score, link — never a rank, suit or category name); `shareResults()` uses the Web Share API with a clipboard, then `execCommand` textarea, fallback |
 | `storage.ts` | localStorage persistence for daily stats, the first-visit help flag, and an in-progress run; every access is try/catch-guarded since Safari private mode throws on write |
@@ -108,9 +108,10 @@ Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, h
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
 `selectedPileIndices`, `selectedHeldIndices`, `livePileCount`, `heldCount`) down. All game
 mutation goes through `dispatch` with the eight `GameAction` variants (`toggle`, `toggleHeld`,
-`hold`, `clear`, `submit`, `giveUp`, `markRecorded`, `newGame`). Every state change is persisted
-to localStorage via `saveGame` in a `useEffect`, so a backgrounded tab silently picks its run
-back up.
+`hold`, `clear`, `submit`, `giveUp`, `markRecorded`, `newGame`). Every state change schedules a
+`saveGame` write in a `useEffect`, debounced (`SAVE_DELAY_MS`) rather than fired on every tap, and
+flushed immediately on `visibilitychange`/`pagehide` so a tab closed mid-burst doesn't lose the
+debounce window — see PP-21. Either way, a backgrounded tab silently picks its run back up.
 
 `App.tsx` renders one of two screens off `state.status`: the play screen (header, board, hold
 tray, hand bar) or, once the run is `complete`, the results page (header with its score block
@@ -181,9 +182,15 @@ should bump the prefix again** rather than migrate.
 
 Within a version, `loadGame` migrates rather than discards where it can: saves predating hold
 slots lack `held` and store `selected` as bare pile-index numbers, and both are repaired in
-place so a returning player doesn't lose a run. Its validation is top-level only, which is a
-known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGame` both compare
-`dateKey` and start fresh on mismatch — so there is no streak or cross-day history by design.
+place so a returning player doesn't lose a run. Validation is deep, not just top-level — every
+card, pile, hold slot, selection entry and hand result is checked before the reducer ever sees
+it (BACKLOG PP-2). The `GAME_KEY` payload additionally carries its own explicit `version` field
+(`GAME_VERSION`), independent of the `v2` key prefix above — that prefix bumps only when a
+*score* stops being comparable, this versions the save's *shape*; a save with no `version` field
+predates the discriminator and still runs through the migrations above, while a `version` that
+doesn't match is discarded outright rather than guessed at (BACKLOG PP-8). Nothing survives a
+new UTC day — `loadStats`/`loadGame` both compare `dateKey` and start fresh on mismatch — so
+there is no streak or cross-day history by design.
 
 One key is deliberately **outside** the version prefix: `pokerpiles:clientId`, the browser's
 anonymous id for score collection (minted in `net/scores.ts`, not `game/storage.ts`, so `game/`
@@ -316,6 +323,19 @@ rather than merging silently. The site serves from `https://andrewpapin.github.i
 is why `vite.config.ts` sets `base: '/Poker-Piles/'` — GitHub Pages paths are case-sensitive and
 must match the repo name exactly. For the same reason the manifest and icon are referenced with
 relative paths in `index.html`, and the favicon is an inline data URI (no path to get wrong).
+Both workflows, plus `.github/workflows/codeql.yml`, pin every `uses:` step to a full commit SHA
+with the version in a trailing comment rather than a mutable tag (BACKLOG PP-12); the SHA is
+resolved from the action's own tags, not assumed. `.github/dependabot.yml` watches `npm` and
+`github-actions` weekly and will open the PRs that keep those pins current (BACKLOG PP-17).
+
+`index.html` also carries a `Content-Security-Policy` meta tag — the only lever GitHub Pages
+allows, since it serves static files with no response headers to set (BACKLOG PP-11). Most
+directives are locked to `'self'`; `style-src` needs `'unsafe-inline'` for `HandBar`'s inline
+`style` prop, and `script-src` allow-lists the theme-bootstrap script in `index.html`'s `<head>`
+by exact SHA-256 hash instead. If that inline script's text ever changes, its hash in the CSP
+`content` attribute has to change with it, or the script silently stops running (harmless —
+`App.tsx`'s own theme bootstrap still takes over on mount — but worth knowing before debugging a
+"theme flashes on load" report).
 
 ## Working in this repo
 

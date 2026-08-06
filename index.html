@@ -12,6 +12,26 @@
          stored or system-preferred theme is `dark`. -->
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#09090b" />
+    <!-- GitHub Pages serves static files only, so a meta tag is the only lever
+         available (no response headers to set) — see PP-11. `style-src`
+         carries `'unsafe-inline'` because HandBar's tier meter sets a CSS
+         custom property via React's `style` prop; every other directive is
+         locked to `'self'` (plus the Supabase RPC origin for score
+         collection), and the favicon/manifest icon route through
+         `img-src ... data:` since they're inline data URIs. There is no
+         third-party script, style, font or frame anywhere in the app.
+         `script-src` allow-lists the theme-bootstrap script below by exact
+         SHA-256 hash rather than `'unsafe-inline'` — if that script's text
+         ever changes (even whitespace), recompute the hash or the script
+         silently stops running and first paint flashes the wrong theme
+         (harmless: App.tsx's own theme bootstrap still takes over on mount).
+         `frame-ancestors` is deliberately omitted — browsers ignore it in a
+         meta tag (the absence of a response header to carry it on GitHub
+         Pages is exactly why that protection isn't available here). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-Nbpnl+krZEN3fBs6R0tK175omoABpKijUDTZhnlWAxk='; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'"
+    />
     <!-- Stamps data-theme on <html> before first paint, so the page never
          flashes the wrong theme then swaps. Reads the same explicit choice
          App.tsx persists (game/storage.ts's `pokerpiles:v2:theme`), falling
@@ -57,6 +77,13 @@
     />
     <!-- Relative, so it resolves under the deploy base rather than the domain root. -->
     <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- Without this, the variable Outfit font is only discovered once
+         styles.css's @font-face parses, guaranteeing a flash of fallback
+         text on first paint — see PP-20. Vite rewrites this to the same
+         hashed asset URL the CSS bundle emits for the font, so there's
+         exactly one copy of the file, fetched once. -->
+    <link rel="preload" as="font" type="font/woff2" href="/src/fonts/outfit-latin.woff2" crossorigin />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Poker Piles" />
