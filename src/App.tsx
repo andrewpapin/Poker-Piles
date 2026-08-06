@@ -287,6 +287,7 @@ export default function App() {
             total={state.total}
             handsPlayed={state.hands.length}
             theme={theme}
+            version={__RELEASE_VERSION__}
             onNewGame={handleNewGame}
             onHelp={() => setShowHelp(true)}
             onGiveUp={handleGiveUp}
@@ -321,6 +322,7 @@ export default function App() {
           total={state.total}
           handsPlayed={state.hands.length}
           theme={theme}
+          version={__RELEASE_VERSION__}
           onNewGame={handleNewGame}
           onHelp={() => setShowHelp(true)}
           onGiveUp={handleGiveUp}

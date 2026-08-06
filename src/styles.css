@@ -288,6 +288,91 @@ button {
   gap: 0.4rem;
 }
 
+/* The hamburger's dropdown — everything that used to be a row of icon
+   buttons, plus the release line at the bottom. Portaled to `document.body`
+   and positioned in screen space (`top`/`left` set inline from the button's
+   rect — see `openMenu` in Header.tsx) rather than nested under
+   `.header-tools`, since `.header` clips overflow and would otherwise cut
+   the popover off. It doesn't need a backdrop or `inert` to feel modal — it
+   sits over the header, not the board. `max-width` is the safety net if the
+   popover ever renders wider than `openMenu`'s `MENU_WIDTH` estimate. */
+.menu-popover {
+  position: fixed;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  min-width: 12.5rem;
+  max-width: calc(100vw - 1rem);
+  padding: 0.4rem;
+  background: var(--surface-raise);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-btn);
+  box-shadow: var(--sh-lift);
+  animation: menu-in var(--t-fast) var(--ease) both;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: none;
+  border-radius: calc(var(--r-btn) - 4px);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-fast) linear, color var(--t-fast) linear;
+}
+
+.menu-item svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  color: var(--ink-2);
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.menu-item:hover svg,
+.menu-item:focus-visible svg {
+  color: inherit;
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 0.35rem 0.5rem;
+  background: var(--hairline);
+}
+
+.menu-version {
+  padding: 0.1rem 0.6rem 0.3rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
 .icon-btn {
   width: 2.3rem;
   height: 2.3rem;
