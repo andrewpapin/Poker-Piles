@@ -24,8 +24,8 @@ PP-7) have been fixed — see **Resolved** below.
 
 **Also resolved:** PP-3, PP-4 and PP-5 — the full P1 accessibility list (the rules-sheet dialog
 contract, hand-result announcements, spent-pile visibility) — PP-15, the component/
-integration test layer — and PP-8, PP-9, PP-11, PP-12, PP-17, PP-20, PP-21 and PP-23 — see
-**Resolved** below.
+integration test layer — PP-6, the UTC rollover prompt — and PP-8, PP-9, PP-11, PP-12, PP-17,
+PP-20, PP-21, PP-22 and PP-23 — see **Resolved** below.
 
 ---
 
@@ -250,6 +250,35 @@ the item isn't re-flagged by a future audit working from a stale copy of this li
 **Value.** Confirms the steering document future work relies on is accurate, without spending
 effort re-fixing something already fixed.
 
+### PP-6 · No UTC rollover handling in an open tab
+
+`App.tsx` polls `todayKey()` against `state.dateKey` — once on mount, on a 60-second interval,
+and on every `visibilitychange` — so a tab left open (or backgrounded) across midnight UTC
+notices within about a minute rather than never. On a mismatch it surfaces a dismissible
+`RolloverBanner` ("Today's puzzle has changed since you started" / Play it / Not now) instead
+of yanking the board out from under a run in progress; declining or ignoring it leaves the
+stale run playable on purpose, same as before. "Play it" and the header's Restart button both
+route through the same `handleNewGame`, which now picks a rollover-specific confirm message
+when `state.dateKey` no longer matches `todayKey()` — so Restart itself stopped silently
+swapping in a different deal without asking, closing the "the same button does two different
+things depending on the clock" gap the original writeup flagged.
+
+A second, previously-unflagged consequence of the same root cause is fixed alongside it:
+`submit_run` stamps `date_key` from the server's own clock rather than trusting the request
+(see CLAUDE.md's "Score collection"), so a run that finished under a UTC date that had already
+rolled over was landing in *today's* community average despite being scored against a
+different day's deck. The completion effect in `App.tsx` now skips `submitRun` outright when
+`state.dateKey !== todayKey()`, so a stale run can no longer corrupt the shared average — it
+just doesn't get a submission, the same as any other best-effort failure. Covered by four new
+cases in `src/App.test.tsx` (banner surfacing and acceptance, dismiss suppressing it rather
+than resurfacing on the next poll tick, the rollover-aware Restart confirm text, and the
+stale-submission skip), driven with fake timers rather than the real clock.
+
+**Value.** If you leave the tab open past midnight UTC, you're told the puzzle has moved on
+instead of unknowingly grinding out yesterday's deal, and if you finish that stale run anyway
+it no longer sneaks into today's shared average under a score nobody else's board could have
+produced.
+
 ### PP-22 · No LICENSE file
 
 Added a root `LICENSE` (MIT) and a `"license": "MIT"` field in `package.json`, per the repo
@@ -274,24 +303,7 @@ None open — see PP-3, PP-4, PP-5 under **Resolved**.
 
 ## P2 — Robustness
 
-### PP-6 · No UTC rollover handling in an open tab — M
-
-**Evidence.** `dateKey` is captured once at bootstrap (`src/App.tsx:32`) and never revisited.
-
-**Why it matters.** A tab left open across midnight UTC keeps playing yesterday's puzzle
-under yesterday's header date, and files the result under the old day via `recordRun`.
-Meanwhile the "Restart" button calls `todayKey()` fresh (`src/App.tsx:81`), so it silently
-swaps in a completely different deal — the same button does two different things depending
-on the clock. Mobile users background tabs for days; this is not an edge case.
-
-**Value.** If you leave the tab open past midnight UTC, you can keep playing "today's"
-puzzle without realizing it's actually yesterday's, and your finished run could get filed
-under the wrong day. A rollover prompt keeps "today's puzzle" meaning the same thing to you
-as it does to everyone else playing the shared daily deal.
-
-**Fix sketch.** Poll `todayKey()` on `visibilitychange` (and on a low-frequency interval);
-when it differs from `state.dateKey`, surface a "new puzzle available" prompt rather than
-yanking the board mid-run.
+None open — see PP-6 under **Resolved**.
 
 ---
 

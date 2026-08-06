@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import { todayKey } from './game/rng';
 import { loadGame, loadStats, markHelpSeen } from './game/storage';
@@ -183,5 +183,73 @@ describe('App', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(window.localStorage.getItem('pokerpiles:v2:theme')).toBe('dark');
     expect(screen.getByRole('button', { name: 'Switch to party theme' })).toBeInTheDocument();
+  });
+
+  describe('UTC rollover (PP-6)', () => {
+    // A tab left open across midnight UTC must not silently keep playing (or
+    // silently discard) yesterday's deal — it should surface the change and
+    // let the player decide, and never let a stale run pollute today's
+    // community average. `window.setInterval` drives the poll, so these tests
+    // run under fake timers and advance them by hand rather than waiting on
+    // the real clock.
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('surfaces a banner once the date rolls over, and "Play it" swaps in the new puzzle', () => {
+      vi.setSystemTime(new Date('2026-08-05T23:59:00Z'));
+      render(<App />);
+      expect(screen.getByText('Aug 5')).toBeInTheDocument();
+      expect(screen.queryByText(/puzzle has changed/)).not.toBeInTheDocument();
+
+      vi.setSystemTime(new Date('2026-08-06T00:01:00Z'));
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(screen.getByText(/puzzle has changed/)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Play it' }));
+      expect(screen.queryByText(/puzzle has changed/)).not.toBeInTheDocument();
+      expect(screen.getByText('Aug 6')).toBeInTheDocument();
+    });
+
+    it('dismissing the banner suppresses it rather than resurfacing on the next poll', () => {
+      vi.setSystemTime(new Date('2026-08-05T23:59:00Z'));
+      render(<App />);
+
+      vi.setSystemTime(new Date('2026-08-06T00:01:00Z'));
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(screen.getByText(/puzzle has changed/)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+      expect(screen.queryByText(/puzzle has changed/)).not.toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(screen.queryByText(/puzzle has changed/)).not.toBeInTheDocument();
+    });
+
+    it('Restart confirms with a rollover-specific message instead of silently swapping the deal', () => {
+      vi.setSystemTime(new Date('2026-08-05T23:59:00Z'));
+      render(<App />);
+      fireEvent.click(pileButtons()[0]);
+
+      vi.setSystemTime(new Date('2026-08-06T00:01:00Z'));
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "Today's puzzle has moved on since you started. Play the new one? Your current run will be lost.",
+      );
+      expect(screen.getByText('Aug 6')).toBeInTheDocument();
+    });
+
+    it('does not submit a run that finished under a date the puzzle has since rolled past', () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      vi.setSystemTime(new Date('2026-08-05T23:59:00Z'));
+      render(<App />);
+
+      vi.setSystemTime(new Date('2026-08-06T00:01:00Z'));
+      fireEvent.click(screen.getByRole('button', { name: 'Give up' }));
+
+      expect(screen.getByText('Gave up')).toBeInTheDocument();
+      expect(submitRun).not.toHaveBeenCalled();
+    });
   });
 });

@@ -93,6 +93,7 @@ directly to preview the live selection; it reads the evaluator, it does not re-i
 | `HandBar.tsx` | Live readout of the current selection (category, points, five-step tier meter) and the Clear / Play hand buttons |
 | `HowToPlay.tsx` | The rules sheet: a five-bullet lockup plus the full scoring ladder, rendered from `CATEGORY_POINTS` |
 | `Results.tsx` | The end-of-run *page* — not an overlay: it replaces the play area once the run is over. Score, per-category counts, per-hand list, the day's average, Play again / Share |
+| `RolloverBanner.tsx` | Dismissible notice that the puzzle has moved to a new UTC date since the run began (PP-6); "Play it" / "Not now" |
 
 `src/net/`:
 
@@ -118,12 +119,21 @@ tray, hand bar) or, once the run is `complete`, the results page (header with it
 suppressed, then `Results` in the play area's place). The shell — `.app`, its `--cw` derivation
 and the `HowToPlay` overlay — is common to both; only the flexible middle row differs.
 
-`App.tsx` also holds five pieces of purely-presentational state that deliberately do **not**
+`App.tsx` also holds several pieces of purely-presentational state that deliberately do **not**
 live in the reducer, because none of them affect the game: `showHelp`, the scored-hand `toast`,
-`armedHoldSlot`, and the `community`/`communityPending` pair behind the daily-average line.
-`armedHoldSlot` is the interaction state behind the two-way hold gesture — tap a card then an
-empty slot, or tap an empty slot then a card. The reducer only ever sees the resulting `hold`
-action with a resolved slot index.
+`armedHoldSlot`, the `community`/`communityPending` pair behind the daily-average line, and
+`rolloverDate` behind the UTC-rollover banner (PP-6). `armedHoldSlot` is the interaction state
+behind the two-way hold gesture — tap a card then an empty slot, or tap an empty slot then a
+card. The reducer only ever sees the resulting `hold` action with a resolved slot index.
+`rolloverDate` is set by a low-frequency poll (mount, a 60s interval, every `visibilitychange`)
+comparing `todayKey()` against `state.dateKey`; a mismatch surfaces `RolloverBanner` rather than
+swapping the board out from under a run in progress, and both the banner's "Play it" and the
+header's Restart button route through `handleNewGame`, which now confirms with a
+rollover-specific message when the two dates disagree instead of silently switching decks. The
+same mismatch check gates the score-submission effect below — a run that completes under a
+`state.dateKey` the puzzle has since rolled past is never posted, since `submit_run` stamps
+`date_key` from the server's own clock and would otherwise misattribute the score to today's
+community average.
 
 ### Key invariants worth knowing before touching game logic
 
