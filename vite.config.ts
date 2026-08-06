@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -5,4 +6,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: '/Poker-Piles/',
   plugins: [react()],
+  test: {
+    // The pure game/net suite needs no DOM and stays in the default `node`
+    // environment so it keeps running fast; component/App specs opt into
+    // jsdom individually via a `// @vitest-environment jsdom` docblock.
+    environment: 'node',
+    setupFiles: ['./src/test/setup.ts'],
+  },
 });

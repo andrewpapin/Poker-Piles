@@ -24,7 +24,7 @@ Offline, the game is unchanged.
 ```bash
 npm install
 npm run dev        # dev server
-npm test           # run the vitest suite once (108 tests, ~7s)
+npm test           # run the vitest suite once (129 tests, ~7s)
 npm run test:watch # vitest in watch mode
 npm run build      # tsc -b (typecheck) then vite build into dist/
 npm run preview    # serve the built bundle
@@ -56,6 +56,7 @@ src/components/  presentational React components — no game rules
 src/App.tsx      the only stateful component: one useReducer plus a little local UI state
 src/styles.css   the entire stylesheet, ~1500 lines, hand-written, no CSS framework
 src/fonts/       the self-hosted Outfit variable subset (woff2)
+src/test/        shared vitest setup — jest-dom matchers and DOM polyfills for jsdom specs only
 supabase/migrations/  the score-collection schema, applied to the hosted project
 BACKLOG.md       prioritized audit findings, items numbered PP-1..PP-23 (stable IDs)
 ```
@@ -267,18 +268,34 @@ governed by one rule: **it is additive and best-effort — the game must be comp
 
 ## Testing conventions
 
-Tests are colocated with the module (`src/game/foo.test.ts`) and cover `game/` and `net/` — there
-are no component or integration tests yet (BACKLOG PP-15). `storage.ts` is covered by
-`storage.test.ts` against a `Map`-backed `localStorage` stub (round-trip, rejection paths,
-migrations, and the private-mode throw paths); PP-15's App-level wiring is still open.
-`net/scores.test.ts` stubs `fetch` and `localStorage` the same way — it pins the request shape
-(notably that no date is ever sent) and, mostly, that **every** failure mode resolves to `null`
-rather than throwing, since that is the property keeping the results sheet renderable offline.
-No test in the suite makes a real network call; keep it that way.
-They are plain vitest with no DOM environment, which is only possible because `game/` is pure;
-keep it that way. `evaluator.reference.test.ts` is a property-style oracle test rather than an
-example test — it exists specifically to guard the wild-resolution shortcut, so it should be
-kept passing rather than trimmed for speed.
+Tests are colocated with the module (`src/game/foo.test.ts`) and cover `game/` and `net/`.
+`storage.ts` is covered by `storage.test.ts` against a `Map`-backed `localStorage` stub
+(round-trip, rejection paths, migrations, and the private-mode throw paths). `net/scores.test.ts`
+stubs `fetch` and `localStorage` the same way — it pins the request shape (notably that no date
+is ever sent) and, mostly, that **every** failure mode resolves to `null` rather than throwing,
+since that is the property keeping the results sheet renderable offline. No test in the suite
+makes a real network call; keep it that way. These `game/`/`net/` tests are plain vitest with no
+DOM environment, which is only possible because `game/` is pure; keep it that way.
+`evaluator.reference.test.ts` is a property-style oracle test rather than an example test — it
+exists specifically to guard the wild-resolution shortcut, so it should be kept passing rather
+than trimmed for speed.
+
+`vite.config.ts`'s `test.environment` defaults to `node` for exactly that reason — the pure suite
+above stays fast and DOM-free. Component and `App.tsx` specs opt into `jsdom` per file via a
+`// @vitest-environment jsdom` docblock at the top of the file instead, so only they pay for a
+DOM. `src/test/setup.ts` is the shared setup file: it's a no-op under `node` (everything in it is
+guarded behind `typeof window !== 'undefined'`) and under `jsdom` it registers
+`@testing-library/jest-dom`'s matchers, polyfills `matchMedia`/`requestAnimationFrame` (jsdom has
+neither, and `Header`'s theme bootstrap and score count-up both need them to exist), and runs
+`cleanup()` plus a `localStorage` clear after every test. `App.test.tsx` and
+`src/components/*.test.tsx` (`HandBar`, `HowToPlay`, `ErrorBoundary`) are this layer — this was
+BACKLOG PP-15; App-level wiring (hold-slot arming both tap orders, the toast/announcement
+lifecycle, the confirm-guarded restart and give-up, the `complete` → `Results` transition, and
+that StrictMode's double-invoke doesn't double-record a play or double-submit a score) and the
+PP-3 dialog contract (focus-in, Tab trap, Escape, `inert` toggle, focus restoration) both now have
+regression coverage rather than resting on the one-time manual verification recorded in
+`BACKLOG.md`. `net/scores`'s `submitRun` is mocked in `App.test.tsx` for the same reason as
+above — no test may make a real network call.
 
 ## Deployment
 
