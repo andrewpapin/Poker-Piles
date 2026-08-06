@@ -22,6 +22,9 @@ and PR titles. Sizes are rough: **S** ≈ under an hour, **M** ≈ half a day, *
 **Suggested first three (done):** PP-13 (CI on pull requests), PP-1, and PP-2 (bundled with
 PP-7) have been fixed — see **Resolved** below.
 
+**Also resolved:** PP-3, PP-4 and PP-5 — the full P1 accessibility list (the rules-sheet dialog
+contract, hand-result announcements, spent-pile visibility) — see **Resolved** below.
+
 ---
 
 ## Resolved
@@ -59,6 +62,37 @@ Fixed as part of PP-2: `src/game/reducer.ts`'s `selectedCards` now filters with
 `c != null` instead of `c !== null`, so a stray `undefined` held-slot entry can no longer
 slip through and reach the evaluator.
 
+### PP-3 · The rules sheet claims `aria-modal` but implements none of the contract
+
+`HowToPlay` (`src/components/HowToPlay.tsx`) now moves focus into the sheet on mount, traps
+Tab within its focusable elements, closes on Escape, and restores focus to whatever opened it
+on unmount. The trap and the `inert` toggle below live in the *same* effect cleanup rather than
+two effects on separate components — an element can't take focus while still marked `inert`,
+and effect-cleanup ordering across a parent/child boundary isn't something to lean on for that
+sequencing. `App.tsx` passes a `backgroundRef` (a new `appContentRef` wrapping everything except
+the overlay, via a `display: contents` `.app-content` div so it doesn't disturb `.app`'s grid)
+that `HowToPlay` marks `inert` for as long as it's mounted, so the claim in `aria-modal="true"`
+is now actually true — verified with a scripted Chromium session exercising focus-on-open,
+Tab-trapping, Escape-to-close, `inert` toggling, and focus restoration on close.
+
+### PP-4 · Playing a hand is never announced
+
+`App.tsx` now renders a visually-hidden (`.sr-only`) `role="status" aria-live="polite"` region
+alongside the existing (still `aria-hidden`) toast, textually echoing the same content each time
+a hand is played — e.g. "Two Pair, 10 points — total 85". The visible toast is unchanged.
+
+### PP-5 · Spent piles are hidden from assistive tech
+
+The force-emptied pile branch in `src/components/Pile.tsx` no longer sets `aria-hidden="true"`
+on the whole pile; the decorative ghost card and the count label keep it, and the pile itself
+now carries a `.sr-only` text node ("Pile 3, empty") so which piles ran dry stays legible to
+assistive tech. Note for future work: this branch (a pile emptied by `giveUp` that never grew an
+extra hold slot) is currently unreachable in the shipped UI — `giveUp` always completes the run
+in the same reducer step, and the finished screen replaces the whole play area with `Results`
+rather than continuing to render `Board`. Fixed anyway since it's the correct markup regardless
+and costs nothing; flagged here rather than deleting the branch, which is out of scope for this
+pass.
+
 ---
 
 ## P0 — Correctness bugs
@@ -69,51 +103,7 @@ None open.
 
 ## P1 — Accessibility
 
-### PP-3 · The rules sheet claims `aria-modal` but implements none of the contract — M
-
-**Evidence.** `src/components/HowToPlay.tsx:8` sets `role="dialog" aria-modal="true"`. It does
-not move focus into the dialog on open, trap focus inside it, close on Escape, restore focus to
-the trigger on close, or mark the board behind as `inert`. A grep for `onKeyDown`, `Escape` or
-`autoFocus` across `src/` returns nothing.
-
-**Why it matters.** `aria-modal="true"` tells assistive tech that everything outside is
-unavailable — while the DOM says otherwise. Keyboard users tab straight out of the overlay
-into the board underneath and interact with a game they can't see. The how-to-play sheet
-opens automatically on a first visit, so this is the first thing a keyboard user meets.
-
-**Fix sketch.** Focus the sheet on mount, cycle Tab within it, close on Escape (`HowToPlay`
-already closes via `onClose`), restore focus on unmount, and set `inert` on `.app` while open.
-
-**Narrowed.** `Results` used to carry the same broken claim; it is a page now, not a dialog,
-so this is down to the one overlay.
-
-### PP-4 · Playing a hand is never announced — S
-
-**Evidence.** No `aria-live` region exists anywhere in `src/` (verified by grep). The
-hand-result toast is explicitly `aria-hidden="true"` (`src/App.tsx:159`), and the running
-score is an `aria-label` on a non-interactive `<span>` (`src/components/Header.tsx:128`) —
-inconsistently supported by AT on a span with no role, and announcing nothing on change
-regardless.
-
-**Why it matters.** A screen reader user plays a hand and receives no feedback about what it
-was or what it scored. That is the game's entire feedback loop.
-
-**Fix sketch.** A visually-hidden `aria-live="polite"` region that announces the last hand
-("Two Pair, 10 points — total 85") when `state.hands` grows. The toast can stay
-`aria-hidden`; the live region carries the same content textually.
-
-### PP-5 · Spent piles are hidden from assistive tech — S
-
-**Evidence.** A drained pile renders with `aria-hidden="true"` on the whole element
-(`src/components/Pile.tsx:40`).
-
-**Why it matters.** Which piles have run dry is the core strategic signal — it drives
-whether a full five-card hand is still reachable. Hiding it entirely removes that
-information non-visually, and the count of live piles is exactly what the HandBar note
-communicates to sighted players.
-
-**Fix sketch.** Keep the decorative card ghost `aria-hidden`, but expose the pile itself as
-a disabled control or a plain text node: "Pile 3, empty".
+None open — see PP-3, PP-4, PP-5 under **Resolved**.
 
 ---
 

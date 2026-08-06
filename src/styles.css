@@ -156,6 +156,26 @@ button {
   cursor: pointer;
 }
 
+/* Visually hidden but still reachable by assistive tech — live-region
+   announcements and text labels that have a visual equivalent already. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A wrapper that must exist in the DOM (for `inert` to reach its subtree)
+   without taking part in `.app`'s grid — its children are the grid items. */
+.app-content {
+  display: contents;
+}
+
 /* ---------- Shell ----------
 
    Everything downstream is sized from --cw, the width of one card. It is the
