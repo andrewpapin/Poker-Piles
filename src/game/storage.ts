@@ -22,9 +22,10 @@ const HELP_KEY = 'pokerpiles:v2:seenHelp';
 // theme on first frame instead of flashing the wrong one then swapping.
 const THEME_KEY = 'pokerpiles:v2:theme';
 
-/** `'light'` is the default Party palette, `'dark'` the night one. The values
- *  are stored in localStorage and read by the inline script in index.html, so
- *  they stay as-is even though both themes now paint on a dark ground. */
+/** `'light'` is the default Party palette (dark-grounded); `'dark'` is the
+ *  light-grounded theme (see styles.css). The values are stored in
+ *  localStorage and read by the inline script in index.html, so they stay
+ *  as-is even though `'dark'` no longer means a dark theme. */
 export type Theme = 'light' | 'dark';
 
 export type DailyStats = {

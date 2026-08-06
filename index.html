@@ -5,8 +5,11 @@
     <!-- No maximum-scale: pinch-zoom stays available. `touch-action: manipulation`
          in the stylesheet already kills the double-tap zoom this was guarding against. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Both themes (Party and night) are dark-grounded, so there is no light
-         scheme for the UA to render form controls or scrollbars against. -->
+    <!-- Party (the default) is dark-grounded; the `dark` theme value is now a
+         light-grounded room instead (see styles.css) — so color-scheme and
+         theme-color both have to flip with the choice below, not just paint
+         once. The values here are Party's, overwritten by the script when the
+         stored or system-preferred theme is `dark`. -->
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#09090b" />
     <!-- Stamps data-theme on <html> before first paint, so the page never
@@ -32,7 +35,8 @@
         }
         document.documentElement.setAttribute('data-theme', theme);
         if (theme === 'dark') {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#141311');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f4f6fb');
+          document.querySelector('meta[name="color-scheme"]').setAttribute('content', 'light');
         }
       })();
     </script>

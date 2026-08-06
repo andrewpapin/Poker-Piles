@@ -152,7 +152,7 @@ describe('App', () => {
   it('toggles and persists the theme', () => {
     render(<App />);
     expect(document.documentElement.dataset.theme).toBe('light');
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to night theme' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }));
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(window.localStorage.getItem('pokerpiles:v2:theme')).toBe('dark');
     expect(screen.getByRole('button', { name: 'Switch to party theme' })).toBeInTheDocument();
