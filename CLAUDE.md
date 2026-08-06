@@ -10,15 +10,21 @@ each pile face up. The player plays up to 5 cards at a time as a poker hand, dra
 pile tops and from two **hold slots** where a card can be banked for a later hand. Every pile
 drawn from flips its next card, piles skipped stay put, and play continues until the board is
 empty. The puzzle is derived entirely from the UTC date, so the same deal is served to everyone
-and resets at midnight UTC. Fully client-side: no backend, no accounts, no leaderboard, no
-network I/O of any kind at runtime.
+and resets at midnight UTC.
+
+The game is playable entirely client-side — no accounts, no leaderboard, and every rule, deal and
+score is computed in the browser. The one exception is score collection: when a run finishes, its
+score is posted anonymously to a Supabase project so the results sheet can show the day's average
+across everyone. That call is strictly best-effort and strictly additive — it happens after the run
+is over, it never gates or alters play, and every failure path resolves to "hide the average line".
+Offline, the game is unchanged.
 
 ## Commands
 
 ```bash
 npm install
 npm run dev        # dev server
-npm test           # run the vitest suite once (72 tests, ~7s)
+npm test           # run the vitest suite once (108 tests, ~7s)
 npm run test:watch # vitest in watch mode
 npm run build      # tsc -b (typecheck) then vite build into dist/
 npm run preview    # serve the built bundle
@@ -45,10 +51,12 @@ hand: single quotes, semicolons, 2-space indent, ~100 column comments.
 
 ```
 src/game/        pure game logic — no React, no DOM (except share.ts's clipboard fallback)
+src/net/         the only network I/O: anonymous score upload + the daily average
 src/components/  presentational React components — no game rules
 src/App.tsx      the only stateful component: one useReducer plus a little local UI state
 src/styles.css   the entire stylesheet, ~1500 lines, hand-written, no CSS framework
 src/fonts/       the self-hosted Outfit variable subset (woff2)
+supabase/migrations/  the score-collection schema, applied to the hosted project
 BACKLOG.md       prioritized audit findings, items numbered PP-1..PP-23 (stable IDs)
 ```
 
@@ -83,7 +91,17 @@ directly to preview the live selection; it reads the evaluator, it does not re-i
 | `HoldSlots.tsx` | The two hold slots — an occupied slot is a selectable card, an empty one is an armable "+" target |
 | `HandBar.tsx` | Live readout of the current selection (category, points, five-step tier meter) and the Clear / Play hand buttons |
 | `HowToPlay.tsx` | The rules sheet: a five-bullet lockup plus the full scoring ladder, rendered from `CATEGORY_POINTS` |
-| `Results.tsx` | The end-of-run *page* — not an overlay: it replaces the play area once the run is over. Score, per-category counts, per-hand list, Play again / Share |
+| `Results.tsx` | The end-of-run *page* — not an overlay: it replaces the play area once the run is over. Score, per-category counts, per-hand list, the day's average, Play again / Share |
+
+`src/net/`:
+
+| Module | Responsibility |
+| --- | --- |
+| `config.ts` | The Supabase project URL and publishable key, with `VITE_`-prefixed env overrides |
+| `scores.ts` | `submitRun()`/`fetchDailySummary()` over `fetch`, plus `clientId()` — the browser's anonymous id |
+
+Nothing under `src/game/` imports `src/net/`; the wiring lives in `App.tsx`, which keeps the game
+rules pure and the game itself complete offline. See "Score collection" below for the contract.
 
 Data flow: `App.tsx` seeds state via `todayKey()` + `loadGame()`/`initGame()`, holds it in a
 single `useReducer(gameReducer, ...)`, and passes derived values (`selectedCards`,
@@ -98,11 +116,12 @@ tray, hand bar) or, once the run is `complete`, the results page (header with it
 suppressed, then `Results` in the play area's place). The shell — `.app`, its `--cw` derivation
 and the `HowToPlay` overlay — is common to both; only the flexible middle row differs.
 
-`App.tsx` also holds three pieces of purely-presentational state that deliberately do **not**
+`App.tsx` also holds five pieces of purely-presentational state that deliberately do **not**
 live in the reducer, because none of them affect the game: `showHelp`, the scored-hand `toast`,
-and `armedHoldSlot`. That last one is the interaction state behind the two-way hold gesture —
-tap a card then an empty slot, or tap an empty slot then a card. The reducer only ever sees the
-resulting `hold` action with a resolved slot index.
+`armedHoldSlot`, and the `community`/`communityPending` pair behind the daily-average line.
+`armedHoldSlot` is the interaction state behind the two-way hold gesture — tap a card then an
+empty slot, or tap an empty slot then a card. The reducer only ever sees the resulting `hold`
+action with a resolved slot index.
 
 ### Key invariants worth knowing before touching game logic
 
@@ -165,6 +184,47 @@ place so a returning player doesn't lose a run. Its validation is top-level only
 known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGame` both compare
 `dateKey` and start fresh on mismatch — so there is no streak or cross-day history by design.
 
+One key is deliberately **outside** the version prefix: `pokerpiles:clientId`, the browser's
+anonymous id for score collection (minted in `net/scores.ts`, not `game/storage.ts`, so `game/`
+stays free of randomness). The `v2` prefix is bumped when a stored *score* stops being comparable;
+this identifies the browser, not a run, and resetting it would let one player's replays land in
+the daily average as several separate scores.
+
+### Score collection
+
+When a run completes, `App.tsx` posts `{ client id, score, hands, gaveUp }` to the Supabase RPC
+`submit_run` and renders the day's average back on the results sheet. The whole feature is
+governed by one rule: **it is additive and best-effort — the game must be complete without it.**
+
+- **`src/game/` never imports `src/net/`.** The game logic stays pure and DOM-free, and the whole
+  suite still runs with no network and no DOM. The wiring lives only in `App.tsx`.
+- **Every failure resolves to `null`, never a throw.** Offline, blocked by an extension, request
+  timed out (8s), project paused, malformed payload — all the same to the caller, which simply
+  omits the average line. Nothing about this may ever gate, delay, or alter play.
+- **The server owns the truth.** `submit_run` stamps `date_key` from the UTC clock rather than
+  trusting the request, bounds the score, and keeps **one row per client id per day** via a unique
+  constraint with `on conflict do nothing`. So a replay, a reload of a finished run, or a retried
+  submit are all safe — the first finished run of the day is the one that counts, and duplicates
+  come back with the current numbers to display rather than double-counting. That is why there is
+  no local "already uploaded" flag to drift out of sync: `App.tsx` guards only within a session
+  (`submittedRef`, keyed by date), and a submit that failed while offline just succeeds next load.
+- **The `runs` table is sealed.** RLS is on with *no policies at all*, and `anon`'s table grants
+  are revoked, so the publishable key can reach exactly the two `security definer` functions
+  (`submit_run`, `daily_summary`) and nothing else. Raw rows and client ids are not readable by
+  anyone holding the key. Supabase's linter flags "RLS enabled, no policy" and "public can execute
+  SECURITY DEFINER function" — both are this design working as intended, not findings to fix.
+- **The publishable key is committed on purpose** (`net/config.ts`). It identifies the project, it
+  does not authorise anything; safety comes from the lockdown above, not from secrecy. Hiding it
+  in a build secret would buy nothing and would silently disable scoring for any fork that didn't
+  set the variable. `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` override it.
+- **The schema is checked in** under `supabase/migrations/`, mirroring what is applied to the
+  hosted project. It is the reviewable copy — change the SQL there and apply the same migration,
+  rather than editing the database by hand and letting the two drift.
+- **What this is not:** the client id is not identity and is never displayed or shared, there is
+  still no login and no leaderboard, and the share text is untouched — it stays spoiler-free.
+  Determined abuse (clearing storage to submit repeatedly) is possible and knowingly accepted;
+  the bar here is "an honest average", not an anti-cheat system.
+
 ## UI and styling conventions
 
 - **One stylesheet, no framework.** `src/styles.css` is organised into commented sections
@@ -207,10 +267,14 @@ known gap (BACKLOG PP-2). Nothing survives a new UTC day — `loadStats`/`loadGa
 
 ## Testing conventions
 
-Tests are colocated with the module (`src/game/foo.test.ts`) and cover `game/` only — there are
-no component or integration tests yet (BACKLOG PP-15). `storage.ts` is covered by
+Tests are colocated with the module (`src/game/foo.test.ts`) and cover `game/` and `net/` — there
+are no component or integration tests yet (BACKLOG PP-15). `storage.ts` is covered by
 `storage.test.ts` against a `Map`-backed `localStorage` stub (round-trip, rejection paths,
 migrations, and the private-mode throw paths); PP-15's App-level wiring is still open.
+`net/scores.test.ts` stubs `fetch` and `localStorage` the same way — it pins the request shape
+(notably that no date is ever sent) and, mostly, that **every** failure mode resolves to `null`
+rather than throwing, since that is the property keeping the results sheet renderable offline.
+No test in the suite makes a real network call; keep it that way.
 They are plain vitest with no DOM environment, which is only possible because `game/` is pure;
 keep it that way. `evaluator.reference.test.ts` is a property-style oracle test rather than an
 example test — it exists specifically to guard the wild-resolution shortcut, so it should be

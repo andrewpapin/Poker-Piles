@@ -10,8 +10,14 @@ the deck runs out.
 The tension: spreading your picks keeps piles alive, while hammering a few piles strands the
 end of the run in partial hands, which score half.
 
-Fully client-side — no backend, no accounts, no leaderboard. The puzzle is derived from the
-UTC date, so it is computed in the browser and resets at midnight UTC.
+No accounts and no leaderboard. The puzzle is derived from the UTC date, so it is computed
+entirely in the browser and resets at midnight UTC — the game plays fine offline.
+
+When a run finishes, its score is posted anonymously so the results sheet can show the day's
+average across everyone who played. What leaves the browser is a score, a hand count, a
+gave-up flag, and a random id that identifies nobody and is never displayed or shared. It is
+best-effort: if the request fails, the average line is simply omitted and nothing else changes.
+Only the first finished run of the day counts, so replays don't move the average.
 
 ## Running it
 
@@ -39,6 +45,10 @@ Game logic is pure and UI-free, so it can be tested on its own:
 | `src/game/storage.ts` | Local-only stats and in-progress run |
 
 React components under `src/components/` only render state and dispatch actions.
+
+The single network dependency lives apart from all of that, under `src/net/` — an anonymous
+score upload and the daily average, over two Supabase RPCs. Nothing in `src/game/` imports it,
+so the rules stay pure and the test suite never touches the network.
 
 ### Scoring
 

@@ -29,6 +29,8 @@ import {
   saveTheme,
 } from './game/storage';
 import type { DailyStats, Theme } from './game/storage';
+import { submitRun } from './net/scores';
+import type { DailySummary } from './net/scores';
 
 function bootstrap(): GameState {
   const dateKey = todayKey();
@@ -52,8 +54,14 @@ export default function App() {
   const [toast, setToast] = useState<{ id: number; label: string; score: number } | null>(null);
   // Which empty hold slot is armed to receive the next card tapped on the board.
   const [armedHoldSlot, setArmedHoldSlot] = useState<number | null>(null);
+  const [community, setCommunity] = useState<DailySummary | null>(null);
+  const [communityPending, setCommunityPending] = useState(false);
   const recordedRef = useRef<GameState | null>(null);
   const prevHandCountRef = useRef(state.hands.length);
+  // The puzzle this session has already published a score for. Keyed by date
+  // rather than a boolean so a tab left open across midnight UTC publishes
+  // again for the new puzzle.
+  const submittedRef = useRef<string | null>(null);
 
   useEffect(() => {
     saveGame(state);
@@ -82,6 +90,27 @@ export default function App() {
     dispatch({ type: 'markRecorded' });
   }, [state]);
 
+  // Publish the finished run and read back today's average with it included.
+  // Unlike the local stats above this deliberately ignores `state.recorded`
+  // and fires for any completed run on screen, a reloaded one included: the
+  // server keeps only the first run per browser per day, so a duplicate call
+  // costs a request and returns the numbers to display rather than
+  // double-counting. That leaves no local "already uploaded" flag to drift,
+  // and a submit that failed while offline simply succeeds on the next load.
+  // `submittedRef` is set before the request so StrictMode's double-invoke in
+  // dev doesn't fire two of them.
+  useEffect(() => {
+    if (state.status !== 'complete' || submittedRef.current === state.dateKey) return;
+    submittedRef.current = state.dateKey;
+    setCommunityPending(true);
+    submitRun({ score: state.total, hands: state.hands.length, gaveUp: state.gaveUp }).then(
+      (summary) => {
+        setCommunity(summary);
+        setCommunityPending(false);
+      },
+    );
+  }, [state.status, state.dateKey, state.total, state.hands.length, state.gaveUp]);
+
   useEffect(() => {
     if (state.hands.length > prevHandCountRef.current) {
       const last = state.hands[state.hands.length - 1];
@@ -105,6 +134,11 @@ export default function App() {
     }
     clearGame();
     setArmedHoldSlot(null);
+    // Let the replay publish too. The server ignores it (the first run of the
+    // day is the one that counts) but still answers with the current average,
+    // so the second results page isn't blank.
+    submittedRef.current = null;
+    setCommunity(null);
     dispatch({ type: 'newGame', dateKey: todayKey() });
   }, [state.hands.length, state.selected.length, state.held]);
 
@@ -181,6 +215,8 @@ export default function App() {
           hands={state.hands}
           gaveUp={state.gaveUp}
           stats={stats ?? loadStats(state.dateKey)}
+          community={community}
+          communityPending={communityPending}
           onPlayAgain={handleNewGame}
         />
 
