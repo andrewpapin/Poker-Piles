@@ -90,13 +90,16 @@ export function Pile({
       );
     }
 
-    // Force-emptied by giving up, never drained through play — stays inert.
+    // Force-emptied by giving up, never drained through play — stays inert,
+    // but which piles ran dry is real strategic signal, so it still needs to
+    // reach assistive tech (the decorative ghost card does not).
     return (
-      <div className="pile pile--spent" aria-hidden="true">
-        <span className="pile-stack">
+      <div className="pile pile--spent">
+        <span className="pile-stack" aria-hidden="true">
           <span className="card card--ghost" />
         </span>
-        <span className="pile-count">0/{PILE_SIZE}</span>
+        <span className="pile-count" aria-hidden="true">0/{PILE_SIZE}</span>
+        <span className="sr-only">{`Pile ${index + 1}, empty`}</span>
       </div>
     );
   }

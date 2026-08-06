@@ -58,6 +58,10 @@ export default function App() {
   const [communityPending, setCommunityPending] = useState(false);
   const recordedRef = useRef<GameState | null>(null);
   const prevHandCountRef = useRef(state.hands.length);
+  // Everything but the HowToPlay overlay itself, so it can be made `inert`
+  // while the overlay is open — `aria-modal="true"` claims the background is
+  // unreachable, so the DOM needs to actually make that true.
+  const appContentRef = useRef<HTMLDivElement>(null);
   // The puzzle this session has already published a score for. Keyed by date
   // rather than a boolean so a tab left open across midnight UTC publishes
   // again for the new puzzle.
@@ -188,6 +192,11 @@ export default function App() {
   const selection = selectedCards(state);
   const heldSelection = selectedHeldIndices(state);
   const toggleHeld = useCallback((slot: number) => dispatch({ type: 'toggleHeld', slot }), []);
+  // Textual echo of the visual toast, for screen readers — the toast itself
+  // stays `aria-hidden` since this carries the same content as prose.
+  const handAnnouncement = toast
+    ? `${toast.label}, ${toast.score} point${toast.score === 1 ? '' : 's'} — total ${state.total}`
+    : '';
 
   // A finished run replaces the play area outright — board, hold tray and hand
   // bar all go, and the results page takes the shell's flexible row.
@@ -196,6 +205,40 @@ export default function App() {
   if (finished) {
     return (
       <div className="app app--finished">
+        <div className="app-content" ref={appContentRef}>
+          <Header
+            dateKey={state.dateKey}
+            total={state.total}
+            handsPlayed={state.hands.length}
+            theme={theme}
+            onNewGame={handleNewGame}
+            onHelp={() => setShowHelp(true)}
+            onGiveUp={handleGiveUp}
+            onToggleTheme={toggleTheme}
+            canGiveUp={false}
+            showStats={false}
+          />
+
+          <Results
+            dateKey={state.dateKey}
+            total={state.total}
+            hands={state.hands}
+            gaveUp={state.gaveUp}
+            stats={stats ?? loadStats(state.dateKey)}
+            community={community}
+            communityPending={communityPending}
+            onPlayAgain={handleNewGame}
+          />
+        </div>
+
+        {showHelp && <HowToPlay onClose={closeHelp} backgroundRef={appContentRef} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <div className="app-content" ref={appContentRef}>
         <Header
           dateKey={state.dateKey}
           total={state.total}
@@ -205,83 +248,56 @@ export default function App() {
           onHelp={() => setShowHelp(true)}
           onGiveUp={handleGiveUp}
           onToggleTheme={toggleTheme}
-          canGiveUp={false}
-          showStats={false}
+          canGiveUp={state.status === 'playing'}
+          showStats
         />
 
-        <Results
-          dateKey={state.dateKey}
-          total={state.total}
-          hands={state.hands}
-          gaveUp={state.gaveUp}
-          stats={stats ?? loadStats(state.dateKey)}
-          community={community}
-          communityPending={communityPending}
-          onPlayAgain={handleNewGame}
-        />
-
-        {showHelp && <HowToPlay onClose={closeHelp} />}
-      </div>
-    );
-  }
-
-  return (
-    <div className="app">
-      <Header
-        dateKey={state.dateKey}
-        total={state.total}
-        handsPlayed={state.hands.length}
-        theme={theme}
-        onNewGame={handleNewGame}
-        onHelp={() => setShowHelp(true)}
-        onGiveUp={handleGiveUp}
-        onToggleTheme={toggleTheme}
-        canGiveUp={state.status === 'playing'}
-        showStats
-      />
-
-      <main className="main">
-        <Board
-          piles={state.piles}
-          selectedPiles={selectedPileIndices(state)}
-          selectedCount={state.selected.length}
-          holdArmed={armedHoldSlot !== null}
-          onToggle={handlePileTap}
-          pileHoldIndex={state.pileHoldIndex}
-          held={state.held}
-          selectedHeldIndices={heldSelection}
-          armedHoldSlot={armedHoldSlot}
-          onArmHold={handleArmHoldSlot}
-          onToggleHeld={toggleHeld}
-        />
-        <HoldSlots
-          held={state.held.slice(0, HOLD_SLOT_COUNT)}
-          selected={heldSelection.filter((i) => i < HOLD_SLOT_COUNT)}
-          selectedCount={state.selected.length}
-          armedSlot={armedHoldSlot}
-          onToggle={toggleHeld}
-          onArm={handleArmHoldSlot}
-        />
-        {toast && (
-          <div className="hand-toast" key={toast.id} aria-hidden="true">
-            <span className="hand-toast-name">{toast.label}</span>
-            <span className="hand-toast-points">+{toast.score}</span>
+        <main className="main">
+          <Board
+            piles={state.piles}
+            selectedPiles={selectedPileIndices(state)}
+            selectedCount={state.selected.length}
+            holdArmed={armedHoldSlot !== null}
+            onToggle={handlePileTap}
+            pileHoldIndex={state.pileHoldIndex}
+            held={state.held}
+            selectedHeldIndices={heldSelection}
+            armedHoldSlot={armedHoldSlot}
+            onArmHold={handleArmHoldSlot}
+            onToggleHeld={toggleHeld}
+          />
+          <HoldSlots
+            held={state.held.slice(0, HOLD_SLOT_COUNT)}
+            selected={heldSelection.filter((i) => i < HOLD_SLOT_COUNT)}
+            selectedCount={state.selected.length}
+            armedSlot={armedHoldSlot}
+            onToggle={toggleHeld}
+            onArm={handleArmHoldSlot}
+          />
+          {toast && (
+            <div className="hand-toast" key={toast.id} aria-hidden="true">
+              <span className="hand-toast-name">{toast.label}</span>
+              <span className="hand-toast-points">+{toast.score}</span>
+            </div>
+          )}
+          <div className="sr-only" role="status" aria-live="polite">
+            {handAnnouncement}
           </div>
-        )}
-      </main>
+        </main>
 
-      <HandBar
-        cards={selection}
-        livePiles={livePileCount(state)}
-        heldCount={heldCount(state)}
-        onClear={() => dispatch({ type: 'clear' })}
-        onSubmit={() => {
-          setArmedHoldSlot(null);
-          dispatch({ type: 'submit' });
-        }}
-      />
+        <HandBar
+          cards={selection}
+          livePiles={livePileCount(state)}
+          heldCount={heldCount(state)}
+          onClear={() => dispatch({ type: 'clear' })}
+          onSubmit={() => {
+            setArmedHoldSlot(null);
+            dispatch({ type: 'submit' });
+          }}
+        />
+      </div>
 
-      {showHelp && <HowToPlay onClose={closeHelp} />}
+      {showHelp && <HowToPlay onClose={closeHelp} backgroundRef={appContentRef} />}
     </div>
   );
 }
