@@ -23,7 +23,8 @@ and PR titles. Sizes are rough: **S** ≈ under an hour, **M** ≈ half a day, *
 PP-7) have been fixed — see **Resolved** below.
 
 **Also resolved:** PP-3, PP-4 and PP-5 — the full P1 accessibility list (the rules-sheet dialog
-contract, hand-result announcements, spent-pile visibility) — see **Resolved** below.
+contract, hand-result announcements, spent-pile visibility) — and PP-15, the component/
+integration test layer — see **Resolved** below.
 
 ---
 
@@ -116,6 +117,36 @@ pass.
 
 **Value.** Screen-reader players are told which piles ran dry, instead of the board going
 silently blank where a pile used to be.
+
+### PP-15 · No component or integration tests
+
+`vite.config.ts` now carries a `test` block: `environment: 'node'` by default (so the pure
+`game/`/`net/` suite stays DOM-free and fast) with `setupFiles: ['./src/test/setup.ts']`.
+Component and `App.tsx` specs opt into `jsdom` per file via a `// @vitest-environment jsdom`
+docblock — `src/App.test.tsx`, `src/ErrorBoundary.test.tsx`, `src/components/HandBar.test.tsx`
+and `src/components/HowToPlay.test.tsx`, 21 tests in total. `src/test/setup.ts` registers
+`@testing-library/jest-dom`'s matchers, polyfills `matchMedia`/`requestAnimationFrame` (absent
+from jsdom; `Header`'s theme bootstrap and score count-up both need them), and runs
+`cleanup()` plus a `localStorage` clear after every test — guarded behind `typeof window !==
+'undefined'` so it's a no-op for the `node`-environment files.
+
+Covered: hold-slot arming in both tap orders (card-then-slot and slot-then-card), the toast +
+`aria-live` announcement lifecycle including its 1100ms auto-dismiss, the confirm-guarded
+restart (and that a fresh game with no progress never prompts) and give-up, the `complete` →
+`Results` transition with `net/scores`'s `submitRun` mocked (no test may make a real network
+call), the theme toggle persisting to `localStorage`, and — the specific concern the `recordedRef`
+/ `submittedRef` guards in `App.tsx` exist for — that mounting under `StrictMode` does not
+double-record a play or double-submit a score. `HowToPlay.test.tsx` separately regression-tests
+the PP-3 dialog contract (focus-in on open, Tab trapped in the sheet, Escape closes, background
+`inert` while mounted and un-inert with focus restored on close), which had only been checked
+once by hand. `HandBar.test.tsx` pins that its live preview (the one component allowed to call
+`evaluateHand` directly) never drifts from what the evaluator itself returns.
+
+**Value.** Catches regressions in the actual on-screen experience — holding a card, seeing
+the results page, restarting a run — the kind of bug you'd only notice by clicking around,
+before it ever reaches a player. It also turns two things that were previously verified once by
+hand (the PP-3 dialog contract, the StrictMode double-invoke guards) into something CI checks
+on every change.
 
 ---
 
@@ -250,34 +281,16 @@ Dependabot (PP-17) keep them current.
 
 ### PP-14 · `storage.ts` has zero tests — M
 
-**Status: partially done.** `src/game/storage.test.ts` now exists, covering round-trip
+**Status: done.** `src/game/storage.test.ts` now exists, covering round-trip
 save/load, rejection of a stale `dateKey`, rejection of the malformed shapes deep validation
 now catches (bad card, out-of-range `selected` index, tampered hand score, unknown
 `status`, negative `total`), the numeric-`selected` migration, the `recorded` migration, the
 `setItem`/`getItem`-throws private-mode paths, and `recordRun` accumulating `plays` and
 `bestScore` across calls. What CLAUDE.md's untested-module note originally flagged is
-closed; PP-15's broader App-level integration coverage is still open.
+closed; see PP-15 below for the App-level integration coverage that used to be the remaining gap.
 
 **Value.** Gives confidence that a future code change can't quietly corrupt your saved game
 or your stats without a test catching it first.
-
-### PP-15 · No component or integration tests — L
-
-**Evidence.** No jsdom environment is configured (`vite.config.ts` has no `test` block) and
-`@testing-library/react` is not a dependency.
-
-**Why it matters.** The reducer is thoroughly covered, but nothing verifies the wiring in
-`App.tsx` — hold-slot arming in both tap orders, the toast lifecycle and its timer cleanup,
-the `complete` → `Results` transition, the confirm-guarded restart. That wiring is where the
-recent features actually live.
-
-**Value.** Catches regressions in the actual on-screen experience — holding a card, seeing
-the results page, restarting a run — the kind of bug you'd only notice by clicking around,
-before it ever reaches a player.
-
-**Fix sketch.** Add `jsdom` + `@testing-library/react` and a `test: { environment: 'jsdom' }`
-block in `vite.config.ts`, then cover the handful of App-level flows above. Keep the pure
-game tests in the default environment so they stay fast.
 
 ### PP-16 · No linter — M
 
